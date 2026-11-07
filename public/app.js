@@ -102,6 +102,7 @@ function renderDashboard() {
                         <span>Dashboard</span>
                     </a>
 
+                    <!-- Master Creation Dropdown Menu -->
                     <div class="pt-2">
                         <p class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Master Management</p>
                         
@@ -119,6 +120,26 @@ function renderDashboard() {
                             <a href="#" onclick="loadMasterView('farmer'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-id-card text-xs"></i><span>Farmers</span></a>
                             <a href="#" onclick="loadMasterView('trader'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-handshake text-xs"></i><span>Traders</span></a>
                             <a href="#" onclick="loadMasterView('item'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-boxes-stacked text-xs"></i><span>Items</span></a>
+                        </div>
+                    </div>
+
+                    <!-- Entry Section Dropdown Menu -->
+                    <div class="pt-2">
+                        <p class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Entry Section</p>
+                        
+                        <button onclick="toggleEntryMenu()" class="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 font-medium text-sm transition">
+                            <div class="flex items-center space-x-3">
+                                <i class="fa-solid fa-pen-to-square w-5 text-blue-500"></i>
+                                <span>Transactions</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-down text-xs" id="entryChevron"></i>
+                        </button>
+
+                        <div id="entrySubmenu" class="pl-4 mt-1 space-y-1 hidden">
+                            <a href="#" onclick="loadEntryView('chicks'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-kiwi-bird text-xs"></i><span>Chicks Entry</span></a>
+                            <a href="#" onclick="loadEntryView('feed'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-boxes-packing text-xs"></i><span>Feed Out (Godown)</span></a>
+                            <a href="#" onclick="loadEntryView('daily'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-chart-line text-xs"></i><span>Daily Entry</span></a>
+                            <a href="#" onclick="loadEntryView('sale'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-file-invoice-dollar text-xs"></i><span>Sale Entry</span></a>
                         </div>
                     </div>
                 </nav>
@@ -171,6 +192,11 @@ function toggleMobileSidebar() {
 function toggleMasterMenu() {
     document.getElementById('masterSubmenu').classList.toggle('hidden');
     document.getElementById('masterChevron').classList.toggle('rotate-180');
+}
+
+function toggleEntryMenu() {
+    document.getElementById('entrySubmenu').classList.toggle('hidden');
+    document.getElementById('entryChevron').classList.toggle('rotate-180');
 }
 
 function autoFillBranch(selectObj) {
@@ -263,7 +289,7 @@ async function loadMasterView(type) {
     `;
 }
 
-// 4. OPEN ADD FORM
+// 4. OPEN ADD FORM FOR MASTERS
 async function openAddForm(type) {
     const content = document.getElementById('mainContent');
     let formTitle = `Create New ${type.toUpperCase()}`;
@@ -283,9 +309,7 @@ async function openAddForm(type) {
         try {
             const bRes = await fetch('/api/broiler/branches');
             const branches = await bRes.json();
-            branches.forEach(b => {
-                branchOpts += `<option value="${b.name}">${b.name} (${b.location})</option>`;
-            });
+            branches.forEach(b => branchOpts += `<option value="${b.name}">${b.name} (${b.location})</option>`);
         } catch(e) {}
 
         formFields = `
@@ -341,7 +365,6 @@ async function openAddForm(type) {
                 ${formFields}
                 <div class="pt-4 flex items-center justify-between">
                     <button type="submit" class="bg-green-700 hover:bg-green-800 text-white font-semibold px-6 py-2.5 rounded-lg shadow transition text-sm">Save Record</button>
-                    <span id="formMsg" class="text-sm font-medium"></span>
                 </div>
             </form>
         </div>
@@ -369,7 +392,159 @@ async function openAddForm(type) {
     });
 }
 
-// 5. DELETE RECORD
+// 5. ENTRY SECTION VIEW & SUBMISSION FORMS
+async function loadEntryView(type) {
+    const content = document.getElementById('mainContent');
+    const title = document.getElementById('pageTitle');
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    title.textContent = `${type.toUpperCase()} Transaction`;
+
+    let formTitle = `New ${type.toUpperCase()} Entry`;
+    let formFields = '';
+    let apiEndpoint = '';
+
+    if (type === 'chicks') {
+        apiEndpoint = '/api/broiler/chicks-entry';
+        let farmerOpts = '<option value="">Select Farmer</option>';
+        try {
+            const res = await fetch('/api/broiler/farmers');
+            const farmers = await res.json();
+            farmers.forEach(f => farmerOpts += `<option value="${f._id}">${f.name} (${f.branch}) - ${f.farmId}</option>`);
+        } catch(e) {}
+
+        formFields = `
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer</label><select id="chicksFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Batch / Lot No</label><input type="text" id="batchNo" required class="w-full px-4 py-2.5 border rounded-lg text-sm" placeholder="LOT-001"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Chicks Quantity</label><input type="number" id="chicksQty" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Hatchery Name</label><input type="text" id="hatcheryName" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+        `;
+    } 
+    else if (type === 'feed') {
+        apiEndpoint = '/api/broiler/feed-request';
+        let farmerOpts = '<option value="">Select Farmer</option>';
+        let itemOpts = '<option value="">Select Feed Item</option>';
+        try {
+            const fRes = await fetch('/api/broiler/farmers');
+            const farmers = await fRes.json();
+            farmers.forEach(f => farmerOpts += `<option value="${f._id}">${f.name} (${f.branch})</option>`);
+
+            const iRes = await fetch('/api/broiler/items');
+            const items = await iRes.json();
+            items.filter(i => i.category === 'Feed').forEach(i => itemOpts += `<option value="${i._id}">${i.name} (${i.unit})</option>`);
+        } catch(e) {}
+
+        formFields = `
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer</label><select id="feedFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Feed Item</label><select id="feedItem" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${itemOpts}</select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Quantity (Bags / Kg)</label><input type="number" id="feedQty" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <p class="text-xs text-blue-600 bg-blue-50 p-3 rounded-lg"><i class="fa-solid fa-circle-info"></i> Note: Yeh entry bhejte hi is farmer ke assigned Supervisor ke paas approval ke liye notification jayegi.</p>
+        `;
+    }
+    else if (type === 'daily') {
+        apiEndpoint = '/api/broiler/daily-entry';
+        let farmerOpts = '<option value="">Select Farmer</option>';
+        try {
+            const res = await fetch('/api/broiler/farmers');
+            const farmers = await res.json();
+            farmers.forEach(f => farmerOpts += `<option value="${f._id}">${f.name} (${f.branch})</option>`);
+        } catch(e) {}
+
+        formFields = `
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer</label><select id="dailyFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Age in Days</label><input type="number" id="ageDays" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Mortality (Dead Birds)</label><input type="number" id="mortality" value="0" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Feed Consumed (Kg)</label><input type="number" id="feedConsumed" value="0" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Body Weight (Gram)</label><input type="number" id="bodyWeight" value="0" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+        `;
+    }
+    else if (type === 'sale') {
+        apiEndpoint = '/api/broiler/sale-entry';
+        let farmerOpts = '<option value="">Select Farmer</option>';
+        let traderOpts = '<option value="">Select Trader</option>';
+        try {
+            const fRes = await fetch('/api/broiler/farmers');
+            const farmers = await fRes.json();
+            farmers.forEach(f => farmerOpts += `<option value="${f._id}">${f.name} (${f.branch})</option>`);
+
+            const tRes = await fetch('/api/broiler/traders');
+            const traders = await tRes.json();
+            traders.forEach(t => traderOpts += `<option value="${t._id}">${t.name} (${t.marketArea})</option>`);
+        } catch(e) {}
+
+        formFields = `
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer (Source)</label><select id="saleFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Trader (Buyer)</label><select id="saleTrader" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${traderOpts}</select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Birds Count (Pcs)</label><input type="number" id="birdsCount" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Total Weight (Kg)</label><input type="number" step="0.01" id="totalWeight" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Rate Per Kg (₹)</label><input type="number" step="0.01" id="ratePerKg" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+        `;
+    }
+
+    content.innerHTML = `
+        <div class="max-w-2xl bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200 mx-auto">
+            <div class="flex justify-between items-center mb-6 pb-3 border-b">
+                <h3 class="text-base md:text-lg font-bold text-gray-800">${formTitle}</h3>
+            </div>
+            <form id="entryForm" class="space-y-4">
+                ${formFields}
+                <div class="pt-4 flex items-center justify-between">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg shadow transition text-sm">Submit Entry</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    document.getElementById('entryForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        let payload = { branch: user.branch || 'Main' };
+
+        if (type === 'chicks') {
+            payload.farmerId = document.getElementById('chicksFarmer').value;
+            payload.batchNo = document.getElementById('batchNo').value;
+            payload.quantity = Number(document.getElementById('chicksQty').value);
+            payload.hatchery = document.getElementById('hatcheryName').value;
+        } else if (type === 'feed') {
+            payload.farmerId = document.getElementById('feedFarmer').value;
+            payload.itemId = document.getElementById('feedItem').value;
+            payload.quantity = Number(document.getElementById('feedQty').value);
+            payload.sentBy = user.id;
+        } else if (type === 'daily') {
+            payload.farmerId = document.getElementById('dailyFarmer').value;
+            payload.ageInDays = Number(document.getElementById('ageDays').value);
+            payload.mortality = Number(document.getElementById('mortality').value);
+            payload.feedConsumedKg = Number(document.getElementById('feedConsumed').value);
+            payload.bodyWeightGm = Number(document.getElementById('bodyWeight').value);
+            payload.recordedBy = user.id;
+        } else if (type === 'sale') {
+            payload.farmerId = document.getElementById('saleFarmer').value;
+            payload.traderId = document.getElementById('saleTrader').value;
+            payload.birdsCount = Number(document.getElementById('birdsCount').value);
+            payload.totalWeightKg = Number(document.getElementById('totalWeight').value);
+            payload.ratePerKg = Number(document.getElementById('ratePerKg').value);
+            payload.soldBy = user.id;
+        }
+
+        try {
+            const res = await fetch(apiEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            if (res.ok) {
+                alert("✅ Entry saved successfully!");
+                document.getElementById('entryForm').reset();
+            } else {
+                alert("❌ Error: " + (result.message || result.error));
+            }
+        } catch (err) {
+            alert("Network error!");
+        }
+    });
+}
+
+// 6. DELETE RECORD
 async function deleteRecord(type, id) {
     if (!confirm("Kya aap sach me is record ko delete karna chahte hain?")) return;
     let url = '';
@@ -390,7 +565,7 @@ async function deleteRecord(type, id) {
     } catch(err) { alert("Server error!"); }
 }
 
-// 6. OPEN EDIT FORM
+// 7. OPEN EDIT FORM
 async function openEditModal(type, id) {
     let apiGet = '';
     if (type === 'branch') apiGet = `/api/broiler/branches`;
