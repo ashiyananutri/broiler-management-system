@@ -78,10 +78,8 @@ function renderDashboard() {
 
     app.innerHTML = `
         <div class="flex h-screen bg-gray-100 overflow-hidden relative">
-            <!-- Mobile Overlay Background -->
             <div id="sidebarOverlay" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden"></div>
 
-            <!-- Sidebar -->
             <aside id="sidebar" class="absolute md:relative inset-y-0 left-0 w-64 bg-gray-900 text-gray-300 flex flex-col shadow-xl transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-30">
                 <div class="p-5 border-b border-gray-800 flex items-center justify-between">
                     <div class="flex items-center space-x-3">
@@ -104,7 +102,6 @@ function renderDashboard() {
                         <span>Dashboard</span>
                     </a>
 
-                    <!-- Master Creation Dropdown Menu -->
                     <div class="pt-2">
                         <p class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Master Management</p>
                         
@@ -134,7 +131,6 @@ function renderDashboard() {
                 </div>
             </aside>
 
-            <!-- Main Content Area -->
             <div class="flex-1 flex flex-col overflow-hidden w-full">
                 <header class="bg-white shadow-sm h-16 flex items-center justify-between px-4 md:px-8 z-10">
                     <div class="flex items-center space-x-3">
@@ -217,7 +213,7 @@ async function loadMasterView(type) {
         let subInfo = '';
         
         if (type === 'user') {
-            subInfo = `Branch: ${item.branch} | Role: ${item.role}`;
+            subInfo = `Email: <strong>${item.email || 'N/A'}</strong> | Branch: ${item.branch} | Role: ${item.role}`;
         } else if (type === 'farmer') {
             let supName = item.supervisorId ? item.supervisorId.name : 'Unassigned';
             subInfo = `Branch: <strong>${item.branch}</strong> | Supervisor: <strong>${supName}</strong> | Phone: ${item.phone}`;
