@@ -72,26 +72,34 @@ function renderLogin() {
     });
 }
 
-// 2. RENDER PROFESSIONAL DASHBOARD
+// 2. RENDER PROFESSIONAL DASHBOARD (Responsive Mobile Support)
 function renderDashboard() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
 
     app.innerHTML = `
-        <div class="flex h-screen bg-gray-100 overflow-hidden">
+        <div class="flex h-screen bg-gray-100 overflow-hidden relative">
+            <!-- Mobile Overlay Background -->
+            <div id="sidebarOverlay" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden"></div>
+
             <!-- Sidebar -->
-            <aside class="w-64 bg-gray-900 text-gray-300 flex flex-col shadow-xl">
-                <div class="p-5 border-b border-gray-800 flex items-center space-x-3">
-                    <div class="bg-green-600 text-white p-2 rounded-lg">
-                        <i class="fa-solid fa-kiwi-bird text-xl"></i>
+            <aside id="sidebar" class="absolute md:relative inset-y-0 left-0 w-64 bg-gray-900 text-gray-300 flex flex-col shadow-xl transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-30">
+                <div class="p-5 border-b border-gray-800 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-green-600 text-white p-2 rounded-lg">
+                            <i class="fa-solid fa-kiwi-bird text-xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-white text-base">Broiler Admin</h1>
+                            <p class="text-xs text-gray-400">Branch: ${user.branch || 'Main'} | Role: ${user.role}</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 class="font-bold text-white text-base">Broiler Admin</h1>
-                        <p class="text-xs text-gray-400">Branch: ${user.branch || 'Main'} | Role: ${user.role}</p>
-                    </div>
+                    <button onclick="toggleMobileSidebar()" class="md:hidden text-gray-400 hover:text-white">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
                 </div>
 
                 <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
-                    <a href="#" onclick="renderDashboard()" class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-green-700 text-white font-medium text-sm">
+                    <a href="#" onclick="renderDashboard(); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-green-700 text-white font-medium text-sm">
                         <i class="fa-solid fa-chart-pie w-5"></i>
                         <span>Dashboard</span>
                     </a>
@@ -109,11 +117,11 @@ function renderDashboard() {
                         </button>
 
                         <div id="masterSubmenu" class="pl-4 mt-1 space-y-1 hidden">
-                            <a href="#" onclick="loadMasterView('branch')" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-code-branch text-xs"></i><span>Branches</span></a>
-                            <a href="#" onclick="loadMasterView('user')" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-user-plus text-xs"></i><span>Users</span></a>
-                            <a href="#" onclick="loadMasterView('farmer')" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-id-card text-xs"></i><span>Farmers</span></a>
-                            <a href="#" onclick="loadMasterView('trader')" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-handshake text-xs"></i><span>Traders</span></a>
-                            <a href="#" onclick="loadMasterView('item')" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-boxes-stacked text-xs"></i><span>Items</span></a>
+                            <a href="#" onclick="loadMasterView('branch'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-code-branch text-xs"></i><span>Branches</span></a>
+                            <a href="#" onclick="loadMasterView('user'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-user-plus text-xs"></i><span>Users</span></a>
+                            <a href="#" onclick="loadMasterView('farmer'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-id-card text-xs"></i><span>Farmers</span></a>
+                            <a href="#" onclick="loadMasterView('trader'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-handshake text-xs"></i><span>Traders</span></a>
+                            <a href="#" onclick="loadMasterView('item'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-boxes-stacked text-xs"></i><span>Items</span></a>
                         </div>
                     </div>
                 </nav>
@@ -127,18 +135,23 @@ function renderDashboard() {
             </aside>
 
             <!-- Main Content Area -->
-            <div class="flex-1 flex flex-col overflow-hidden">
-                <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 z-10">
-                    <h2 class="text-xl font-bold text-gray-800" id="pageTitle">Dashboard Overview</h2>
-                    <div class="flex items-center space-x-4">
-                        <span class="text-sm font-medium text-gray-600">Welcome, <strong class="text-gray-900">${user.name || 'Admin'}</strong></span>
-                        <div class="w-10 h-10 rounded-full bg-green-700 text-white flex items-center justify-center font-bold">
+            <div class="flex-1 flex flex-col overflow-hidden w-full">
+                <header class="bg-white shadow-sm h-16 flex items-center justify-between px-4 md:px-8 z-10">
+                    <div class="flex items-center space-x-3">
+                        <button onclick="toggleMobileSidebar()" class="md:hidden text-gray-700 hover:text-green-700 text-xl focus:outline-none">
+                            <i class="fa-solid fa-bars"></i>
+                        </button>
+                        <h2 class="text-lg md:text-xl font-bold text-gray-800 truncate" id="pageTitle">Dashboard Overview</h2>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span class="text-xs md:text-sm font-medium text-gray-600 hidden sm:inline">Welcome, <strong class="text-gray-900">${user.name || 'Admin'}</strong></span>
+                        <div class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-green-700 text-white flex items-center justify-center font-bold text-sm">
                             ${(user.name || 'A')[0].toUpperCase()}
                         </div>
                     </div>
                 </header>
 
-                <main class="flex-1 overflow-y-auto p-8" id="mainContent">
+                <main class="flex-1 overflow-y-auto p-4 md:p-8" id="mainContent">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                             <h3 class="text-xl font-bold text-green-600 mt-1">System Connected 🚀</h3>
@@ -148,6 +161,15 @@ function renderDashboard() {
             </div>
         </div>
     `;
+}
+
+function toggleMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (sidebar && overlay) {
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+    }
 }
 
 function toggleMasterMenu() {
@@ -207,13 +229,13 @@ async function loadMasterView(type) {
 
         rowsHtml += `
             <tr class="border-b hover:bg-gray-50">
-                <td class="py-3 px-4 text-sm text-gray-700">${index + 1}</td>
-                <td class="py-3 px-4 text-sm font-medium text-gray-900">${identifier} ${extraBadge}</td>
-                <td class="py-3 px-4 text-sm text-gray-600">${subInfo}</td>
-                <td class="py-3 px-4 text-right">
+                <td class="py-3 px-3 md:px-4 text-xs md:text-sm text-gray-700">${index + 1}</td>
+                <td class="py-3 px-3 md:px-4 text-xs md:text-sm font-medium text-gray-900">${identifier} ${extraBadge}</td>
+                <td class="py-3 px-3 md:px-4 text-xs md:text-sm text-gray-600">${subInfo}</td>
+                <td class="py-3 px-3 md:px-4 text-right whitespace-nowrap">
                     ${isAdmin ? `
-                        <button onclick="openEditModal('${type}', '${item._id}')" class="text-blue-600 hover:text-blue-800 text-sm font-semibold mr-3"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
-                        <button onclick="deleteRecord('${type}', '${item._id}')" class="text-red-600 hover:text-red-800 text-sm font-semibold"><i class="fa-solid fa-trash"></i> Delete</button>
+                        <button onclick="openEditModal('${type}', '${item._id}')" class="text-blue-600 hover:text-blue-800 text-xs md:text-sm font-semibold mr-2 md:mr-3"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+                        <button onclick="deleteRecord('${type}', '${item._id}')" class="text-red-600 hover:text-red-800 text-xs md:text-sm font-semibold"><i class="fa-solid fa-trash"></i> Delete</button>
                     ` : `<span class="text-xs text-gray-400 italic">View Only</span>`}
                 </td>
             </tr>
@@ -221,19 +243,19 @@ async function loadMasterView(type) {
     });
 
     content.innerHTML = `
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <div class="flex justify-between items-center mb-6 pb-3 border-b">
-                <h3 class="text-lg font-bold text-gray-800">All ${type.toUpperCase()} Records</h3>
-                ${isAdmin ? `<button onclick="openAddForm('${type}')" class="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"><i class="fa-solid fa-plus mr-1"></i> Add New ${type}</button>` : ''}
+        <div class="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-3 border-b gap-3">
+                <h3 class="text-base md:text-lg font-bold text-gray-800">All ${type.toUpperCase()} Records</h3>
+                ${isAdmin ? `<button onclick="openAddForm('${type}')" class="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition w-full sm:w-auto text-center"><i class="fa-solid fa-plus mr-1"></i> Add New ${type}</button>` : ''}
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+                <table class="w-full text-left border-collapse min-w-[500px]">
                     <thead>
                         <tr class="bg-gray-100 text-gray-600 text-xs uppercase font-semibold">
-                            <th class="py-3 px-4">#</th>
-                            <th class="py-3 px-4">Name / Identifier</th>
-                            <th class="py-3 px-4">Details</th>
-                            <th class="py-3 px-4 text-right">Actions</th>
+                            <th class="py-3 px-3 md:px-4">#</th>
+                            <th class="py-3 px-3 md:px-4">Name / Identifier</th>
+                            <th class="py-3 px-3 md:px-4">Details</th>
+                            <th class="py-3 px-3 md:px-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -255,9 +277,9 @@ async function openAddForm(type) {
     if (type === 'branch') {
         apiEndpoint = '/api/broiler/branches';
         formFields = `
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Branch Name</label><input type="text" id="bName" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Location</label><input type="text" id="bLoc" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Incharge</label><input type="text" id="bInc" required class="w-full px-4 py-2.5 border rounded-lg"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Branch Name</label><input type="text" id="bName" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Location</label><input type="text" id="bLoc" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Incharge</label><input type="text" id="bInc" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
         `;
     } else if (type === 'user') {
         apiEndpoint = '/api/auth/register';
@@ -271,14 +293,14 @@ async function openAddForm(type) {
         } catch(e) {}
 
         formFields = `
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Full Name</label><input type="text" id="uName" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Email</label><input type="email" id="uEmail" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Password</label><input type="password" id="uPass" required class="w-full px-4 py-2.5 border rounded-lg"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Full Name</label><input type="text" id="uName" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Email</label><input type="email" id="uEmail" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Password</label><input type="password" id="uPass" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1">Select Branch</label>
-                <select id="uBranch" required class="w-full px-4 py-2.5 border rounded-lg bg-white">${branchOpts}</select>
+                <select id="uBranch" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${branchOpts}</select>
             </div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Role</label><select id="uRole" class="w-full px-4 py-2.5 border rounded-lg"><option value="admin">Admin</option><option value="manager">Manager</option><option value="supervisor">Supervisor</option></select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Role</label><select id="uRole" class="w-full px-4 py-2.5 border rounded-lg text-sm"><option value="admin">Admin</option><option value="manager">Manager</option><option value="supervisor">Supervisor</option></select></div>
         `;
     } else if (type === 'farmer') {
         apiEndpoint = '/api/broiler/farmers';
@@ -290,39 +312,39 @@ async function openAddForm(type) {
         } catch(e) {}
 
         formFields = `
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Supervisor</label><select id="farmerSupervisor" required onchange="autoFillBranch(this)" class="w-full px-4 py-2.5 border rounded-lg bg-white">${supOpts}</select></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Branch (Auto)</label><input type="text" id="farmerBranch" readonly class="w-full px-4 py-2.5 border rounded-lg bg-gray-100"></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Farmer Name</label><input type="text" id="farmerName" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Phone</label><input type="text" id="farmerPhone" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Village</label><input type="text" id="farmerVillage" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Shed Capacity</label><input type="number" id="farmerCapacity" required class="w-full px-4 py-2.5 border rounded-lg"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Supervisor</label><select id="farmerSupervisor" required onchange="autoFillBranch(this)" class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${supOpts}</select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Branch (Auto)</label><input type="text" id="farmerBranch" readonly class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Farmer Name</label><input type="text" id="farmerName" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Phone</label><input type="text" id="farmerPhone" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Village</label><input type="text" id="farmerVillage" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Shed Capacity</label><input type="number" id="farmerCapacity" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
         `;
     } else if (type === 'trader') {
         apiEndpoint = '/api/broiler/traders';
         formFields = `
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Trader / Firm Name</label><input type="text" id="tName" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Phone</label><input type="text" id="tPhone" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Market Area</label><input type="text" id="tArea" required class="w-full px-4 py-2.5 border rounded-lg"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Trader / Firm Name</label><input type="text" id="tName" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Phone</label><input type="text" id="tPhone" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Market Area</label><input type="text" id="tArea" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
         `;
     } else if (type === 'item') {
         apiEndpoint = '/api/broiler/items';
         formFields = `
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Item Name</label><input type="text" id="iName" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Category</label><select id="iCat" class="w-full px-4 py-2.5 border rounded-lg"><option>Feed</option><option>Medicine</option><option>Chicks</option><option>Accessories</option></select></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Unit</label><input type="text" id="iUnit" required class="w-full px-4 py-2.5 border rounded-lg"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Item Name</label><input type="text" id="iName" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Category</label><select id="iCat" class="w-full px-4 py-2.5 border rounded-lg text-sm"><option>Feed</option><option>Medicine</option><option>Chicks</option><option>Accessories</option></select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Unit</label><input type="text" id="iUnit" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
         `;
     }
 
     content.innerHTML = `
-        <div class="max-w-2xl bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+        <div class="max-w-2xl bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200 mx-auto">
             <div class="flex justify-between items-center mb-6 pb-3 border-b">
-                <h3 class="text-lg font-bold text-gray-800">${formTitle}</h3>
+                <h3 class="text-base md:text-lg font-bold text-gray-800">${formTitle}</h3>
                 <button onclick="loadMasterView('${type}')" class="text-gray-500 hover:text-gray-700 text-sm font-semibold"><i class="fa-solid fa-arrow-left"></i> Back</button>
             </div>
             <form id="addForm" class="space-y-4">
                 ${formFields}
                 <div class="pt-4 flex items-center justify-between">
-                    <button type="submit" class="bg-green-700 hover:bg-green-800 text-white font-semibold px-6 py-2.5 rounded-lg shadow transition">Save Record</button>
+                    <button type="submit" class="bg-green-700 hover:bg-green-800 text-white font-semibold px-6 py-2.5 rounded-lg shadow transition text-sm">Save Record</button>
                     <span id="formMsg" class="text-sm font-medium"></span>
                 </div>
             </form>
@@ -392,12 +414,11 @@ async function openEditModal(type, id) {
 
         if (type === 'branch') {
             formFields = `
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Branch Name</label><input type="text" id="editName" value="${item.name || ''}" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Location</label><input type="text" id="editLoc" value="${item.location || ''}" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Incharge</label><input type="text" id="editInc" value="${item.incharge || ''}" required class="w-full px-4 py-2.5 border rounded-lg"></div>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Branch Name</label><input type="text" id="editName" value="${item.name || ''}" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Location</label><input type="text" id="editLoc" value="${item.location || ''}" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Incharge</label><input type="text" id="editInc" value="${item.incharge || ''}" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             `;
         } else if (type === 'farmer') {
-            // Farmer Edit with Supervisor & Auto Branch Change support
             let supOpts = '<option value="">Select Supervisor</option>';
             try {
                 const uRes = await fetch('/api/auth/users-list');
@@ -411,27 +432,27 @@ async function openEditModal(type, id) {
             formFields = `
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Supervisor</label>
-                    <select id="editFarmerSupervisor" required onchange="autoFillEditBranch(this)" class="w-full px-4 py-2.5 border rounded-lg bg-white">${supOpts}</select>
+                    <select id="editFarmerSupervisor" required onchange="autoFillEditBranch(this)" class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${supOpts}</select>
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Branch (Auto)</label>
-                    <input type="text" id="editFarmerBranch" value="${item.branch || ''}" readonly class="w-full px-4 py-2.5 border rounded-lg bg-gray-100">
+                    <input type="text" id="editFarmerBranch" value="${item.branch || ''}" readonly class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-sm">
                 </div>
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Farmer Name</label><input type="text" id="editName" value="${item.name || ''}" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Phone</label><input type="text" id="editPhone" value="${item.phone || ''}" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Village</label><input type="text" id="editVillage" value="${item.village || ''}" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Shed Capacity</label><input type="number" id="editCap" value="${item.shedCapacity || ''}" required class="w-full px-4 py-2.5 border rounded-lg"></div>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Farmer Name</label><input type="text" id="editName" value="${item.name || ''}" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Phone</label><input type="text" id="editPhone" value="${item.phone || ''}" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Village</label><input type="text" id="editVillage" value="${item.village || ''}" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Shed Capacity</label><input type="number" id="editCap" value="${item.shedCapacity || ''}" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             `;
         } else if (type === 'trader') {
             formFields = `
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Trader Name</label><input type="text" id="editName" value="${item.name || ''}" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Phone</label><input type="text" id="editPhone" value="${item.phone || ''}" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Market Area</label><input type="text" id="editArea" value="${item.marketArea || ''}" required class="w-full px-4 py-2.5 border rounded-lg"></div>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Trader Name</label><input type="text" id="editName" value="${item.name || ''}" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Phone</label><input type="text" id="editPhone" value="${item.phone || ''}" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Market Area</label><input type="text" id="editArea" value="${item.marketArea || ''}" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             `;
         } else if (type === 'item') {
             formFields = `
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Item Name</label><input type="text" id="editName" value="${item.name || ''}" required class="w-full px-4 py-2.5 border rounded-lg"></div>
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Unit</label><input type="text" id="editUnit" value="${item.unit || ''}" required class="w-full px-4 py-2.5 border rounded-lg"></div>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Item Name</label><input type="text" id="editName" value="${item.name || ''}" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Unit</label><input type="text" id="editUnit" value="${item.unit || ''}" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             `;
         } else {
             let branchOpts = '';
@@ -452,32 +473,32 @@ async function openEditModal(type, id) {
             });
 
             formFields = `
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Full Name</label><input type="text" id="editName" value="${item.name || ''}" required class="w-full px-4 py-2.5 border rounded-lg"></div>
+                <div><label class="block text-sm font-semibold text-gray-700 mb-1">Full Name</label><input type="text" id="editName" value="${item.name || ''}" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Branch</label>
-                    <select id="editBranch" required class="w-full px-4 py-2.5 border rounded-lg bg-white">${branchOpts}</select>
+                    <select id="editBranch" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${branchOpts}</select>
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Role</label>
-                    <select id="editRole" required class="w-full px-4 py-2.5 border rounded-lg bg-white">${roleOpts}</select>
+                    <select id="editRole" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${roleOpts}</select>
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">New Password <span class="text-xs text-gray-400 font-normal">(Chhodein agar password nahi badalna hai)</span></label>
-                    <input type="password" id="editPassword" placeholder="Enter new password if you want to change" class="w-full px-4 py-2.5 border rounded-lg">
+                    <input type="password" id="editPassword" placeholder="Enter new password if you want to change" class="w-full px-4 py-2.5 border rounded-lg text-sm">
                 </div>
             `;
         }
 
         content.innerHTML = `
-            <div class="max-w-2xl bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+            <div class="max-w-2xl bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200 mx-auto">
                 <div class="flex justify-between items-center mb-6 pb-3 border-b">
-                    <h3 class="text-lg font-bold text-gray-800">Edit ${type.toUpperCase()}</h3>
+                    <h3 class="text-base md:text-lg font-bold text-gray-800">Edit ${type.toUpperCase()}</h3>
                     <button onclick="loadMasterView('${type}')" class="text-gray-500 hover:text-gray-700 text-sm font-semibold"><i class="fa-solid fa-arrow-left"></i> Back</button>
                 </div>
                 <form id="editForm" class="space-y-4">
                     ${formFields}
                     <div class="pt-4 flex items-center justify-between">
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg shadow transition">Update Record</button>
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg shadow transition text-sm">Update Record</button>
                     </div>
                 </form>
             </div>
