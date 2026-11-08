@@ -798,12 +798,23 @@ async function loadReportView(reportType) {
         content.innerHTML = `
             <div class="max-w-4xl bg-white p-6 rounded-xl shadow-sm border border-gray-200 mx-auto">
                 <div class="mb-6 pb-3 border-b">
-                    <h3 class="text-lg font-bold text-gray-800">Generate Farmer Ledger</h3>
-                    <p class="text-xs text-gray-500">Select a farmer to view complete flock performance & transaction history</p>
+                    <h3 class="text-lg font-bold text-gray-800">Generate Farmer & Batch Ledger</h3>
+                    <p class="text-xs text-gray-500">Farmer select karein, phir batch chun kar poori report dekhein</p>
                 </div>
-                <div class="flex flex-col sm:flex-row gap-4 mb-6">
-                    <select id="reportFarmerId" class="flex-1 px-4 py-2.5 border rounded-lg bg-white text-sm font-medium">${farmerOpts}</select>
-                    <button onclick="generateFarmerLedger()" class="bg-purple-700 hover:bg-purple-800 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition"><i class="fa-solid fa-file-invoice mr-1"></i> View Ledger</button>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Select Farmer</label>
+                        <select id="reportFarmerId" onchange="fetchBatchesForLedger(this.value)" class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm font-medium">${farmerOpts}</select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Select Batch</label>
+                        <select id="reportBatchNo" class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm font-medium">
+                            <option value="ALL">-- All Batches --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="text-right mb-4">
+                    <button onclick="generateFarmerLedger()" class="bg-purple-700 hover:bg-purple-800 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition"><i class="fa-solid fa-file-invoice mr-1"></i> View Ledger Report</button>
                 </div>
                 <div id="farmerLedgerOutput"></div>
             </div>
@@ -811,50 +822,90 @@ async function loadReportView(reportType) {
     }
 }
 
+async function fetchBatchesForLedger(farmerId) {
+    const batchSelect = document.getElementById('reportBatchNo');
+    batchSelect.innerHTML = `<option value="ALL">-- All Batches --</option>`;
+    if (!farmerId) return;
+
+    try {
+        const res = await fetch(`/api/broiler/farmer-batches/${farmerId}`);
+        const batches = await res.json();
+        batches.forEach(b => {
+            batchSelect.innerHTML += `<option value="${b.batchNo}">Batch: ${b.batchNo} (Qty: ${b.quantity})</option>`;
+        });
+    } catch(e) {}
+}
+
 async function generateFarmerLedger() {
     const farmerId = document.getElementById('reportFarmerId').value;
+    const batchNo = document.getElementById('reportBatchNo').value;
     const output = document.getElementById('farmerLedgerOutput');
-    if (!farmerId) return alert("⚠️ Kripya Farmer select karein!");
+    
+    if (!farmerId) return alert("⚠️ Kripya pehle Farmer select karein!");
 
     output.innerHTML = `<div class="text-center py-6 text-gray-500">Loading ledger data...</div>`;
 
     try {
-        const res = await fetch(`/api/broiler/reports/farmer-ledger/${farmerId}`);
+        const res = await fetch(`/api/broiler/reports/farmer-ledger/${farmerId}?batchNo=${batchNo}`);
         const data = await res.json();
         const { farmer, chicks, feeds, dailyLogs, sales } = data;
 
-        let chicksRows = chicks.map(c => `<tr><td class="p-2 border">${c.batchNo}</td><td class="p-2 border">${c.quantity} Pcs</td><td class="p-2 border">${c.hatchery}</td><td class="p-2 border">${new Date(c.date).toLocaleDateString('en-IN')}</td></tr>`).join('');
-        let feedRows = feeds.map(f => `<tr><td class="p-2 border">${f.batchNo}</td><td class="p-2 border">${f.itemId?.name || 'Feed'}</td><td class="p-2 border">${f.quantity} Bags/Kg</td><td class="p-2 border">${new Date(f.date).toLocaleDateString('en-IN')}</td></tr>`).join('');
-        let saleRows = sales.map(s => `<tr><td class="p-2 border">${s.batchNo}</td><td class="p-2 border">${s.traderId?.name || 'N/A'}</td><td class="p-2 border">${s.birdsCount} Pcs</td><td class="p-2 border">${s.totalWeightKg} Kg</td><td class="p-2 border">₹${s.ratePerKg}</td><td class="p-2 border font-bold">₹${s.totalAmount}</td></tr>`).join('');
+        let chicksRows = chicks.map(c => `<tr><td class="p-2 border font-semibold">${c.batchNo}</td><td class="p-2 border">${c.quantity} Pcs</td><td class="p-2 border">${c.hatchery}</td><td class="p-2 border">${new Date(c.date).toLocaleDateString('en-IN')}</td></tr>`).join('');
+        
+        let feedRows = feeds.map(f => `<tr><td class="p-2 border font-semibold">${f.batchNo}</td><td class="p-2 border">${f.itemId?.name || 'Feed'}</td><td class="p-2 border text-blue-700 font-bold">${f.quantity} Kg</td><td class="p-2 border">${new Date(f.date).toLocaleDateString('en-IN')}</td></tr>`).join('');
+        
+        let dailyRows = dailyLogs.map(d => `<tr><td class="p-2 border font-semibold">${d.batchNo}</td><td class="p-2 border">Day ${d.ageInDays}</td><td class="p-2 border text-red-600 font-bold">${d.mortality} Pcs</td><td class="p-2 border text-blue-600">${d.feedConsumedKg} Kg</td><td class="p-2 border">${d.bodyWeightGm} gm</td><td class="p-2 border">${new Date(d.date).toLocaleDateString('en-IN')}</td></tr>`).join('');
+
+        let saleRows = sales.map(s => `<tr><td class="p-2 border font-semibold">${s.batchNo}</td><td class="p-2 border">${s.traderId?.name || 'N/A'}</td><td class="p-2 border">${s.birdsCount} Pcs</td><td class="p-2 border">${s.totalWeightKg} Kg</td><td class="p-2 border">₹${s.ratePerKg}</td><td class="p-2 border font-bold text-green-700">₹${s.totalAmount}</td><td class="p-2 border">${new Date(s.date).toLocaleDateString('en-IN')}</td></tr>`).join('');
 
         output.innerHTML = `
             <div class="mt-6 border-t pt-6">
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex justify-between items-center mb-4 bg-gray-50 p-4 rounded-lg">
                     <div>
                         <h4 class="text-base font-bold text-gray-900">${farmer.name}</h4>
-                        <p class="text-xs text-gray-500">Farm ID: ${farmer.farmId} | Branch: ${farmer.branch} | Phone: ${farmer.phone}</p>
+                        <p class="text-xs text-gray-600 mt-0.5">Farm ID: <strong>${farmer.farmId}</strong> | Branch: <strong>${farmer.branch}</strong> | Phone: ${farmer.phone}</p>
+                        <p class="text-xs text-purple-700 mt-1">Selected Batch Filter: <strong>${batchNo}</strong></p>
                     </div>
-                    <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-semibold"><i class="fa-solid fa-print"></i> Print</button>
+                    <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-xs font-semibold"><i class="fa-solid fa-print mr-1"></i> Print Ledger</button>
                 </div>
 
                 <div class="space-y-6 text-xs">
                     <div>
-                        <h5 class="font-bold text-gray-700 mb-2 uppercase border-b pb-1">Chicks Placements</h5>
-                        <table class="w-full text-left border">${chicksRows || '<tr><td colspan="4" class="p-2 text-center text-gray-400">No chicks placement record</td></tr>'}</table>
+                        <h5 class="font-bold text-gray-700 mb-2 uppercase border-b pb-1">1. Chicks Placement</h5>
+                        <table class="w-full text-left border bg-white">${chicksRows || '<tr><td colspan="4" class="p-3 text-center text-gray-400">No chicks record found</td></tr>'}</table>
                     </div>
                     <div>
-                        <h5 class="font-bold text-gray-700 mb-2 uppercase border-b pb-1">Feed Issued</h5>
-                        <table class="w-full text-left border">${feedRows || '<tr><td colspan="4" class="p-2 text-center text-gray-400">No feed issued record</td></tr>'}</table>
+                        <h5 class="font-bold text-gray-700 mb-2 uppercase border-b pb-1">2. Feed Issued (Godown Out)</h5>
+                        <table class="w-full text-left border bg-white">${feedRows || '<tr><td colspan="4" class="p-3 text-center text-gray-400">No feed issue record found</td></tr>'}</table>
                     </div>
                     <div>
-                        <h5 class="font-bold text-gray-700 mb-2 uppercase border-b pb-1">Sale Summary</h5>
-                        <table class="w-full text-left border">${saleRows || '<tr><td colspan="6" class="p-2 text-center text-gray-400">No sale record</td></tr>'}</table>
+                        <h5 class="font-bold text-gray-700 mb-2 uppercase border-b pb-1">3. Daily Logs (Mortality & Consumption)</h5>
+                        <table class="w-full text-left border bg-white">${dailyRows || '<tr><td colspan="6" class="p-3 text-center text-gray-400">No daily logs found</td></tr>'}</table>
+                    </div>
+                    <div>
+                        <h5 class="font-bold text-gray-700 mb-2 uppercase border-b pb-1">4. Sale & Revenue Summary</h5>
+                        <table class="w-full text-left border bg-white">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 font-semibold">
+                                    <th class="p-2 border">Batch</th>
+                                    <th class="p-2 border">Trader</th>
+                                    <th class="p-2 border">Birds</th>
+                                    <th class="p-2 border">Weight</th>
+                                    <th class="p-2 border">Rate</th>
+                                    <th class="p-2 border">Amount</th>
+                                    <th class="p-2 border">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${saleRows || '<tr><td colspan="7" class="p-3 text-center text-gray-400">No sale records found</td></tr>'}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         `;
     } catch(e) {
-        output.innerHTML = `<div class="text-red-500 p-4">Error loading ledger!</div>`;
+        output.innerHTML = `<div class="text-red-500 p-4">Error loading ledger data!</div>`;
     }
 }
 
