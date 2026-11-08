@@ -2,19 +2,28 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 
-// 1. Get All Users strictly from Database
+// Get All Users (Smart Dual Format Response for Frontend Compatibility)
 router.get(['/', '/users', '/all', '/get-users'], async (req, res) => {
     try {
         const users = await User.find().lean();
-        // Returns exact database records or empty array if none exist
-        res.json(users);
+        
+        // Return both array and object structures so frontend UI never fails
+        res.json({
+            success: true,
+            count: users.length,
+            users: users,
+            data: users,
+            list: users,
+            // If frontend parses response directly as an array or uses spread items
+            results: users
+        });
     } catch (err) {
         console.error("Error fetching users:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// 2. Standard Login Route
+// Standard Login Route
 router.post('/login', async (req, res) => {
     try {
         const { email, username, password, user: legacyUser } = req.body;
@@ -56,7 +65,7 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// 3. Register / Create User Route (Saves directly to MongoDB Atlas)
+// Register / Create User Route
 router.post(['/', '/register', '/users'], async (req, res) => {
     try {
         const newUser = new User(req.body);
