@@ -42,9 +42,20 @@ router.put('/items/:id', async (req, res) => res.json(await Item.findByIdAndUpda
 router.delete('/items/:id', async (req, res) => { await Item.findByIdAndDelete(req.params.id); res.json({message: "Deleted"}); });
 
 
+// --- HELPER: GET BATCHES BY FARMER ID ---
+router.get('/farmer-batches/:farmerId', async (req, res) => {
+    try {
+        const batches = await ChicksEntry.find({ farmerId: req.params.farmerId }, 'batchNo quantity createdAt');
+        res.json(batches);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // --- TRANSACTION / ENTRY ROUTES ---
 
-// 1. Chicks Entry (Auto Batch No Generation & Optional Date)
+// 1. Chicks Entry
 router.post('/chicks-entry', async (req, res) => {
     try {
         const count = await ChicksEntry.countDocuments();
@@ -64,14 +75,14 @@ router.post('/chicks-entry', async (req, res) => {
 // 2. Feed Out Request
 router.post('/feed-request', async (req, res) => {
     try {
-        const { branch, farmerId, itemId, quantity, sentBy, date } = req.body;
+        const { branch, farmerId, batchNo, itemId, quantity, sentBy, date } = req.body;
         const farmer = await Farmer.findById(farmerId);
         if (!farmer || !farmer.supervisorId) {
             return res.status(400).json({ message: 'Farmer has no assigned supervisor!' });
         }
 
         let feedData = {
-            branch, farmerId, itemId, quantity, sentBy,
+            branch, farmerId, batchNo, itemId, quantity, sentBy,
             supervisorId: farmer.supervisorId,
             status: 'Pending'
         };
@@ -102,11 +113,11 @@ router.post('/daily-entry', async (req, res) => {
 // 4. Sale Entry
 router.post('/sale-entry', async (req, res) => {
     try {
-        const { branch, farmerId, traderId, birdsCount, totalWeightKg, ratePerKg, soldBy, date } = req.body;
+        const { branch, farmerId, batchNo, traderId, birdsCount, totalWeightKg, ratePerKg, soldBy, date } = req.body;
         const totalAmount = totalWeightKg * ratePerKg;
         
         let saleData = {
-            branch, farmerId, traderId, birdsCount, totalWeightKg, ratePerKg, totalAmount, soldBy
+            branch, farmerId, batchNo, traderId, birdsCount, totalWeightKg, ratePerKg, totalAmount, soldBy
         };
         if (date) saleData.date = date;
 
