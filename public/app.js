@@ -205,6 +205,67 @@ function autoFillEditBranch(selectObj) {
     document.getElementById('editFarmerBranch').value = selectedOption.getAttribute('data-branch') || '';
 }
 
+// Global variable for Age Calculation
+let currentFarmerBatches = [];
+
+async function fetchBatchesForFarmer(farmerId, selectContainerId) {
+    const container = document.getElementById(selectContainerId);
+    if (!farmerId) {
+        container.innerHTML = `<input type="text" readonly value="Select a farmer first" class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-gray-400 text-sm">`;
+        return;
+    }
+
+    container.innerHTML = `<input type="text" readonly value="Loading batches..." class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-gray-400 text-sm">`;
+
+    try {
+        const res = await fetch(`/api/broiler/farmer-batches/${farmerId}`);
+        currentFarmerBatches = await res.json();
+
+        if (currentFarmerBatches.length === 0) {
+            container.innerHTML = `<input type="text" readonly value="No active batch found for this farmer!" class="w-full px-4 py-2.5 border rounded-lg bg-red-50 text-red-500 text-sm font-medium">`;
+            if (document.getElementById('ageDays')) document.getElementById('ageDays').value = '';
+        } else if (currentFarmerBatches.length === 1) {
+            const singleBatch = currentFarmerBatches[0];
+            container.innerHTML = `
+                <input type="text" id="selectedBatchNo" value="${singleBatch.batchNo}" readonly class="w-full px-4 py-2.5 border rounded-lg bg-green-50 text-green-800 font-semibold text-sm">
+                <p class="text-xs text-green-600 mt-1"><i class="fa-solid fa-check"></i> Single active batch auto-selected: <strong>${singleBatch.batchNo}</strong></p>
+            `;
+            updateCalculatedAge(singleBatch.batchNo);
+        } else {
+            let options = '<option value="">-- Select Batch --</option>';
+            currentFarmerBatches.forEach(b => {
+                options += `<option value="${b.batchNo}">Batch: ${b.batchNo} (Qty: ${b.quantity})</option>`;
+            });
+            container.innerHTML = `
+                <select id="selectedBatchNo" required onchange="updateCalculatedAge(this.value)" class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm font-semibold">${options}</select>
+                <p class="text-xs text-amber-600 mt-1"><i class="fa-solid fa-triangle-exclamation"></i> Is farmer ke 1 se zyada active batches hain, kripya batch select karein.</p>
+            `;
+        }
+    } catch (err) {
+        container.innerHTML = `<input type="text" readonly value="Error loading batches!" class="w-full px-4 py-2.5 border rounded-lg bg-red-50 text-red-500 text-sm">`;
+    }
+}
+
+function updateCalculatedAge(selectedBatchNo) {
+    const ageInput = document.getElementById('ageDays');
+    if (!ageInput) return;
+
+    const selectedBatch = currentFarmerBatches.find(b => b.batchNo === selectedBatchNo);
+    if (!selectedBatch) {
+        ageInput.value = '';
+        return;
+    }
+
+    const placementDate = new Date(selectedBatch.date || selectedBatch.createdAt);
+    const entryDateVal = document.getElementById('entryDate').value;
+    const targetDate = entryDateVal ? new Date(entryDateVal) : new Date();
+
+    const diffTime = Math.abs(targetDate - placementDate);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    ageInput.value = diffDays > 0 ? diffDays : 1;
+}
+
 // 3. MASTER LIST VIEW
 async function loadMasterView(type) {
     const content = document.getElementById('mainContent');
@@ -386,44 +447,6 @@ async function openAddForm(type) {
     });
 }
 
-// Helper function to fetch batches dynamically when a farmer is selected
-async function fetchBatchesForFarmer(farmerId, selectContainerId) {
-    const container = document.getElementById(selectContainerId);
-    if (!farmerId) {
-        container.innerHTML = `<input type="text" readonly value="Select a farmer first" class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-gray-400 text-sm">`;
-        return;
-    }
-
-    container.innerHTML = `<input type="text" readonly value="Loading batches..." class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-gray-400 text-sm">`;
-
-    try {
-        const res = await fetch(`/api/broiler/farmer-batches/${farmerId}`);
-        const batches = await res.json();
-
-        if (batches.length === 0) {
-            container.innerHTML = `<input type="text" readonly value="No active batch found for this farmer!" class="w-full px-4 py-2.5 border rounded-lg bg-red-50 text-red-500 text-sm font-medium">`;
-        } else if (batches.length === 1) {
-            // Agar sirf 1 batch hai toh auto select ho jayega
-            container.innerHTML = `
-                <input type="text" id="selectedBatchNo" value="${batches[0].batchNo}" readonly class="w-full px-4 py-2.5 border rounded-lg bg-green-50 text-green-800 font-semibold text-sm">
-                <p class="text-xs text-green-600 mt-1"><i class="fa-solid fa-check"></i> Single active batch auto-selected: <strong>${batches[0].batchNo}</strong></p>
-            `;
-        } else {
-            // Agar 1 se zyada batches hain toh dropdown dikhega
-            let options = '<option value="">-- Select Batch --</option>';
-            batches.forEach(b => {
-                options += `<option value="${b.batchNo}">Batch: ${b.batchNo} (Qty: ${b.quantity})</option>`;
-            });
-            container.innerHTML = `
-                <select id="selectedBatchNo" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm font-semibold">${options}</select>
-                <p class="text-xs text-amber-600 mt-1"><i class="fa-solid fa-triangle-exclamation"></i> Is farmer ke 1 se zyada active batches hain, kripya batch select karein.</p>
-            `;
-        }
-    } catch (err) {
-        container.innerHTML = `<input type="text" readonly value="Error loading batches!" class="w-full px-4 py-2.5 border rounded-lg bg-red-50 text-red-500 text-sm">`;
-    }
-}
-
 // 5. ENTRY SECTION VIEW & SUBMISSION
 async function loadEntryView(type) {
     const content = document.getElementById('mainContent');
@@ -501,8 +524,11 @@ async function loadEntryView(type) {
                     <input type="text" readonly value="Select a farmer first" class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-gray-400 text-sm">
                 </div>
             </div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Entry Date (Optional - Today if blank)</label><input type="date" id="entryDate" class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Age in Days</label><input type="number" id="ageDays" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Entry Date (Optional - Today if blank)</label><input type="date" id="entryDate" onchange="updateCalculatedAge(document.getElementById('selectedBatchNo')?.value)" class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Age in Days (Auto Calculated)</label>
+                <input type="number" id="ageDays" required class="w-full px-4 py-2.5 border rounded-lg bg-green-50 text-green-900 font-bold text-sm" placeholder="Auto calculated on batch select">
+            </div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Mortality (Dead Birds)</label><input type="number" id="mortality" value="0" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Feed Consumed (Kg)</label><input type="number" id="feedConsumed" value="0" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Body Weight (Gram)</label><input type="number" id="bodyWeight" value="0" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
