@@ -22,7 +22,7 @@ async function ensureDefaultAdmin() {
     }
 }
 
-// 1. Get All Users Route (Supports both '/' and '/users')
+// Get All Users Route (Supports both '/' and '/users')
 router.get(['/', '/users'], async (req, res) => {
     try {
         await ensureDefaultAdmin();
@@ -34,7 +34,7 @@ router.get(['/', '/users'], async (req, res) => {
     }
 });
 
-// 2. User Login Route
+// User Login Route (Auto-creates default admin if database is empty)
 router.post('/login', async (req, res) => {
     try {
         await ensureDefaultAdmin();
@@ -78,7 +78,7 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// 3. Register / Create User Route
+// Register / Create User Route
 router.post(['/', '/register'], async (req, res) => {
     try {
         const newUser = new User(req.body);
