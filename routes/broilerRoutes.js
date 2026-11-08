@@ -5,18 +5,15 @@ const Batch = require('../models/Batch');
 const Branch = require('../models/Branch');
 const DailyLog = require('../models/DailyLog');
 const Farmer = require('../models/Farmer');
-const Invoice = require('../models/Invoice');
 const Item = require('../models/Item');
-const LiftingLog = require('../models/LiftingLog');
 const Trader = require('../models/Trader');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 
 // ==========================================
-// 1. MASTER CREATION ROUTES
+// MASTER CREATION ROUTES
 // ==========================================
 
-// Branches
 router.get('/branches', async (req, res) => {
     try { res.json(await Branch.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -24,7 +21,6 @@ router.post('/branches', async (req, res) => {
     try { const item = new Branch(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Traders
 router.get('/traders', async (req, res) => {
     try { res.json(await Trader.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -32,7 +28,6 @@ router.post('/traders', async (req, res) => {
     try { const item = new Trader(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Items
 router.get('/items', async (req, res) => {
     try { res.json(await Item.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -40,7 +35,6 @@ router.post('/items', async (req, res) => {
     try { const item = new Item(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Users (Master Management)
 router.get('/users', async (req, res) => {
     try { res.json(await User.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -48,7 +42,6 @@ router.post('/users', async (req, res) => {
     try { const item = new User(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Farmers
 router.get('/farmers', async (req, res) => {
     try { res.json(await Farmer.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -85,7 +78,7 @@ router.get(['/farmer-batches/:farmerId', '/api/farmer-batches/:farmerId'], async
 
 
 // ==========================================
-// 2. ENTRY & TRANSACTION ROUTES
+// ENTRY & TRANSACTION ROUTES
 // ==========================================
 
 router.get('/batches', async (req, res) => {
@@ -108,7 +101,7 @@ router.post('/transactions', async (req, res) => {
 
 
 // ==========================================
-// 3. REPORTS & SUMMARY ROUTES
+// REPORTS & SUMMARY ROUTES
 // ==========================================
 
 router.get('/reports/batch-summary', async (req, res) => {
