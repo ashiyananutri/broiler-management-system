@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(cors());
 
 // MongoDB Connection
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://ashiyanafeedtraders1_db_user:rishu123456@cluster0.qk1qbgl.mongodb.net/broiler_db?retryWrites=true&w=majority&compressors=zlib';
+const MONGO_URI = process.env.MONGO_URI || 'YOUR_MONGODB_CONNECTION_STRING_HERE';
 mongoose.connect(MONGO_URI)
     .then(() => console.log("MongoDB Connected Successfully"))
     .catch(err => console.error("MongoDB Connection Error:", err));
@@ -20,7 +20,7 @@ mongoose.connect(MONGO_URI)
 const authRoutes = require('./routes/authRoutes');
 const broilerRoutes = require('./routes/broilerRoutes');
 
-// Route Mounting (Covering all URL variations to prevent 404 / Network errors)
+// Route Mounting
 app.use('/api/auth', authRoutes);
 app.use('/auth', authRoutes);
 app.use('/api/users', authRoutes);
@@ -34,7 +34,7 @@ app.use('/', broilerRoutes);
 const frontendPath = path.join(__dirname, 'public');
 app.use(express.static(frontendPath));
 
-// Fallback Route for Single Page Applications (SPA)
+// Fallback Route for SPA
 app.get('*', (req, res) => {
     const indexPath = path.join(frontendPath, 'index.html');
     if (fs.existsSync(indexPath)) {
