@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+
 const farmerSchema = new mongoose.Schema({
     farmId: { type: String, required: true, unique: true },
     branch: { type: String, required: true },
@@ -8,4 +9,5 @@ const farmerSchema = new mongoose.Schema({
     village: { type: String, required: true },
     shedCapacity: { type: Number, required: true }
 }, { timestamps: true });
+
 module.exports = mongoose.model('Farmer', farmerSchema);
