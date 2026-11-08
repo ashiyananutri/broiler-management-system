@@ -12,7 +12,51 @@ const Trader = require('../models/Trader');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 
-// 1. Batch-wise Summary Report
+// ==========================================
+// 1. FARMER ROUTES (Network Error Fix)
+// ==========================================
+
+// Get All Farmers
+router.get('/farmers', async (req, res) => {
+    try {
+        const farmers = await Farmer.find().lean();
+        res.json(farmers);
+    } catch (err) {
+        console.error("Error fetching farmers:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Create New Farmer
+router.post('/farmers', async (req, res) => {
+    try {
+        const newFarmer = new Farmer(req.body);
+        const savedFarmer = await newFarmer.save();
+        res.status(201).json(savedFarmer);
+    } catch (err) {
+        console.error("Error creating farmer:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get Farmer by ID
+router.get('/farmers/:id', async (req, res) => {
+    try {
+        const farmer = await Farmer.findById(req.params.id).lean();
+        if (!farmer) return res.status(404).json({ error: "Farmer not found" });
+        res.json(farmer);
+    } catch (err) {
+        console.error("Error fetching farmer by ID:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// ==========================================
+// 2. REPORTS & SUMMARY ROUTES
+// ==========================================
+
+// Batch-wise Summary Report
 router.get('/reports/batch-summary', async (req, res) => {
     try {
         const chicks = await Batch.find().lean();
@@ -20,7 +64,6 @@ router.get('/reports/batch-summary', async (req, res) => {
         const dailyLogs = await DailyLog.find().lean();
         const sales = await Transaction.find().lean();
 
-        // Create a lookup map for farmers by ID and also by name/code if needed
         const farmerMap = {};
         farmers.forEach(f => {
             farmerMap[f._id.toString()] = f;
@@ -31,7 +74,6 @@ router.get('/reports/batch-summary', async (req, res) => {
             const logs = dailyLogs.filter(d => d && d.batchNo === batchNo);
             const batchSales = sales.filter(s => s && s.batchNo === batchNo);
 
-            // Find farmer info safely using multiple possible keys
             const rawFarmerRef = c.farmerId || c.farmer || c.farmer_id;
             let farmerObj = null;
             if (rawFarmerRef) {
@@ -88,7 +130,7 @@ router.get('/reports/batch-summary', async (req, res) => {
     }
 });
 
-// 2. Branch-wise Performance Report
+// Branch-wise Performance Report
 router.get('/reports/branch-summary', async (req, res) => {
     try {
         const chicks = await Batch.find().lean();
@@ -173,7 +215,7 @@ router.get('/reports/branch-summary', async (req, res) => {
     }
 });
 
-// 3. Farmer Ledger Report Route
+// Farmer Ledger Report Route
 router.get('/reports/farmer-ledger/:farmerId', async (req, res) => {
     try {
         const { farmerId } = req.params;
@@ -196,7 +238,7 @@ router.get('/reports/farmer-ledger/:farmerId', async (req, res) => {
     }
 });
 
-// 4. Farmer Active Batches Route
+// Farmer Active Batches Route
 router.get('/farmer-batches/:farmerId', async (req, res) => {
     try {
         const { farmerId } = req.params;
