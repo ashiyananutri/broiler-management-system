@@ -724,7 +724,6 @@ async function loadEntryView(type) {
     });
 }
 
-
 // 6. REPORT VIEWS GENERATION
 async function loadReportView(reportType) {
     const content = document.getElementById('mainContent');
