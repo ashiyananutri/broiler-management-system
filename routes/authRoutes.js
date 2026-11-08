@@ -6,7 +6,6 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'broiler_secret_key';
 
-// Register User (Admin Only ideally)
 router.post('/register', async (req, res) => {
     try {
         const { name, email, password, branch, role } = req.body;
@@ -22,7 +21,6 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Login
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -39,7 +37,6 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// Get Users List (Including Email)
 router.get('/users-list', async (req, res) => {
     try {
         const users = await User.find({}, 'name branch role email');
@@ -49,7 +46,6 @@ router.get('/users-list', async (req, res) => {
     }
 });
 
-// Update User
 router.put('/users/:id', async (req, res) => {
     try {
         const { name, branch, role, password } = req.body;
@@ -64,7 +60,6 @@ router.put('/users/:id', async (req, res) => {
     }
 });
 
-// Delete User
 router.delete('/users/:id', async (req, res) => {
     try {
         await User.findByIdAndDelete(req.params.id);
