@@ -72,7 +72,7 @@ function renderLogin() {
     });
 }
 
-// 2. RENDER PROFESSIONAL DASHBOARD (Responsive Mobile Support)
+// 2. RENDER PROFESSIONAL DASHBOARD
 function renderDashboard() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -386,7 +386,45 @@ async function openAddForm(type) {
     });
 }
 
-// 5. ENTRY SECTION VIEW & SUBMISSION (With Auto Batch Preview and Dates)
+// Helper function to fetch batches dynamically when a farmer is selected
+async function fetchBatchesForFarmer(farmerId, selectContainerId) {
+    const container = document.getElementById(selectContainerId);
+    if (!farmerId) {
+        container.innerHTML = `<input type="text" readonly value="Select a farmer first" class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-gray-400 text-sm">`;
+        return;
+    }
+
+    container.innerHTML = `<input type="text" readonly value="Loading batches..." class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-gray-400 text-sm">`;
+
+    try {
+        const res = await fetch(`/api/broiler/farmer-batches/${farmerId}`);
+        const batches = await res.json();
+
+        if (batches.length === 0) {
+            container.innerHTML = `<input type="text" readonly value="No active batch found for this farmer!" class="w-full px-4 py-2.5 border rounded-lg bg-red-50 text-red-500 text-sm font-medium">`;
+        } else if (batches.length === 1) {
+            // Agar sirf 1 batch hai toh auto select ho jayega
+            container.innerHTML = `
+                <input type="text" id="selectedBatchNo" value="${batches[0].batchNo}" readonly class="w-full px-4 py-2.5 border rounded-lg bg-green-50 text-green-800 font-semibold text-sm">
+                <p class="text-xs text-green-600 mt-1"><i class="fa-solid fa-check"></i> Single active batch auto-selected: <strong>${batches[0].batchNo}</strong></p>
+            `;
+        } else {
+            // Agar 1 se zyada batches hain toh dropdown dikhega
+            let options = '<option value="">-- Select Batch --</option>';
+            batches.forEach(b => {
+                options += `<option value="${b.batchNo}">Batch: ${b.batchNo} (Qty: ${b.quantity})</option>`;
+            });
+            container.innerHTML = `
+                <select id="selectedBatchNo" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm font-semibold">${options}</select>
+                <p class="text-xs text-amber-600 mt-1"><i class="fa-solid fa-triangle-exclamation"></i> Is farmer ke 1 se zyada active batches hain, kripya batch select karein.</p>
+            `;
+        }
+    } catch (err) {
+        container.innerHTML = `<input type="text" readonly value="Error loading batches!" class="w-full px-4 py-2.5 border rounded-lg bg-red-50 text-red-500 text-sm">`;
+    }
+}
+
+// 5. ENTRY SECTION VIEW & SUBMISSION
 async function loadEntryView(type) {
     const content = document.getElementById('mainContent');
     const title = document.getElementById('pageTitle');
@@ -411,8 +449,7 @@ async function loadEntryView(type) {
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer</label><select id="chicksFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1">Batch / Lot No</label>
-                <input type="text" id="batchNoDisplay" readonly value="System Auto-Generated on Submit (e.g. BATCH-001)" class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-gray-500 text-sm">
-                <p class="text-xs text-gray-500 mt-1">Yeh batch number submit hone par database dwara auto assign ho jayega.</p>
+                <input type="text" readonly value="System Auto-Generated on Submit (BATCH-001...)" class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-gray-500 text-sm">
             </div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Entry Date (Optional - Today if blank)</label><input type="date" id="entryDate" class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Chicks Quantity</label><input type="number" id="chicksQty" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
@@ -434,7 +471,13 @@ async function loadEntryView(type) {
         } catch(e) {}
 
         formFields = `
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer</label><select id="feedFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer</label><select id="feedFarmer" required onchange="fetchBatchesForFarmer(this.value, 'batchContainer')" class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Batch No</label>
+                <div id="batchContainer">
+                    <input type="text" readonly value="Select a farmer first" class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-gray-400 text-sm">
+                </div>
+            </div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Feed Item</label><select id="feedItem" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${itemOpts}</select></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Entry Date (Optional - Today if blank)</label><input type="date" id="entryDate" class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Quantity (Bags / Kg)</label><input type="number" id="feedQty" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
@@ -451,7 +494,13 @@ async function loadEntryView(type) {
         } catch(e) {}
 
         formFields = `
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer</label><select id="dailyFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer</label><select id="dailyFarmer" required onchange="fetchBatchesForFarmer(this.value, 'batchContainer')" class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Batch No</label>
+                <div id="batchContainer">
+                    <input type="text" readonly value="Select a farmer first" class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-gray-400 text-sm">
+                </div>
+            </div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Entry Date (Optional - Today if blank)</label><input type="date" id="entryDate" class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Age in Days</label><input type="number" id="ageDays" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Mortality (Dead Birds)</label><input type="number" id="mortality" value="0" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
@@ -474,7 +523,13 @@ async function loadEntryView(type) {
         } catch(e) {}
 
         formFields = `
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer (Source)</label><select id="saleFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer (Source)</label><select id="saleFarmer" required onchange="fetchBatchesForFarmer(this.value, 'batchContainer')" class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Batch No</label>
+                <div id="batchContainer">
+                    <input type="text" readonly value="Select a farmer first" class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-gray-400 text-sm">
+                </div>
+            </div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Trader (Buyer)</label><select id="saleTrader" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${traderOpts}</select></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Sale Date (Optional - Today if blank)</label><input type="date" id="entryDate" class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Birds Count (Pcs)</label><input type="number" id="birdsCount" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
@@ -508,25 +563,34 @@ async function loadEntryView(type) {
             payload.farmerId = document.getElementById('chicksFarmer').value;
             payload.quantity = Number(document.getElementById('chicksQty').value);
             payload.hatchery = document.getElementById('hatcheryName').value;
-        } else if (type === 'feed') {
-            payload.farmerId = document.getElementById('feedFarmer').value;
-            payload.itemId = document.getElementById('feedItem').value;
-            payload.quantity = Number(document.getElementById('feedQty').value);
-            payload.sentBy = user.id;
-        } else if (type === 'daily') {
-            payload.farmerId = document.getElementById('dailyFarmer').value;
-            payload.ageInDays = Number(document.getElementById('ageDays').value);
-            payload.mortality = Number(document.getElementById('mortality').value);
-            payload.feedConsumedKg = Number(document.getElementById('feedConsumed').value);
-            payload.bodyWeightGm = Number(document.getElementById('bodyWeight').value);
-            payload.recordedBy = user.id;
-        } else if (type === 'sale') {
-            payload.farmerId = document.getElementById('saleFarmer').value;
-            payload.traderId = document.getElementById('saleTrader').value;
-            payload.birdsCount = Number(document.getElementById('birdsCount').value);
-            payload.totalWeightKg = Number(document.getElementById('totalWeight').value);
-            payload.ratePerKg = Number(document.getElementById('ratePerKg').value);
-            payload.soldBy = user.id;
+        } else {
+            const farmerElem = document.getElementById(type === 'feed' ? 'feedFarmer' : type === 'daily' ? 'dailyFarmer' : 'saleFarmer');
+            const batchElem = document.getElementById('selectedBatchNo');
+            
+            if (!batchElem || !batchElem.value) {
+                return alert("⚠️ Kripya valid batch select karein!");
+            }
+
+            payload.farmerId = farmerElem.value;
+            payload.batchNo = batchElem.value;
+
+            if (type === 'feed') {
+                payload.itemId = document.getElementById('feedItem').value;
+                payload.quantity = Number(document.getElementById('feedQty').value);
+                payload.sentBy = user.id;
+            } else if (type === 'daily') {
+                payload.ageInDays = Number(document.getElementById('ageDays').value);
+                payload.mortality = Number(document.getElementById('mortality').value);
+                payload.feedConsumedKg = Number(document.getElementById('feedConsumed').value);
+                payload.bodyWeightGm = Number(document.getElementById('bodyWeight').value);
+                payload.recordedBy = user.id;
+            } else if (type === 'sale') {
+                payload.traderId = document.getElementById('saleTrader').value;
+                payload.birdsCount = Number(document.getElementById('birdsCount').value);
+                payload.totalWeightKg = Number(document.getElementById('totalWeight').value);
+                payload.ratePerKg = Number(document.getElementById('ratePerKg').value);
+                payload.soldBy = user.id;
+            }
         }
 
         try {
