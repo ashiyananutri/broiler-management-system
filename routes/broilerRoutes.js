@@ -13,65 +13,98 @@ const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 
 // ==========================================
-// 1. FARMER ROUTES (Fixes Network Error)
+// 1. MASTER CREATION ROUTES (Branches, Traders, Items, Users, Farmers)
 // ==========================================
 
-// Get All Farmers
+// Branches
+router.get('/branches', async (req, res) => {
+    try { res.json(await Branch.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
+});
+router.post('/branches', async (req, res) => {
+    try { const item = new Branch(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Traders
+router.get('/traders', async (req, res) => {
+    try { res.json(await Trader.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
+});
+router.post('/traders', async (req, res) => {
+    try { const item = new Trader(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Items
+router.get('/items', async (req, res) => {
+    try { res.json(await Item.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
+});
+router.post('/items', async (req, res) => {
+    try { const item = new Item(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Users
+router.get('/users', async (req, res) => {
+    try { res.json(await User.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
+});
+router.post('/users', async (req, res) => {
+    try { const item = new User(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Farmers
 router.get('/farmers', async (req, res) => {
-    try {
-        const farmers = await Farmer.find().lean();
-        res.json(farmers);
-    } catch (err) {
-        console.error("Error fetching farmers:", err);
-        res.status(500).json({ error: err.message });
-    }
+    try { res.json(await Farmer.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
-// Create New Farmer
 router.post('/farmers', async (req, res) => {
-    try {
-        const newFarmer = new Farmer(req.body);
-        const savedFarmer = await newFarmer.save();
-        res.status(201).json(savedFarmer);
-    } catch (err) {
-        console.error("Error creating farmer:", err);
-        res.status(500).json({ error: err.message });
-    }
+    try { const item = new Farmer(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
-// Get Farmer by ID
 router.get('/farmers/:id', async (req, res) => {
-    try {
-        const farmer = await Farmer.findById(req.params.id).lean();
-        if (!farmer) return res.status(404).json({ error: "Farmer not found" });
-        res.json(farmer);
-    } catch (err) {
-        console.error("Error fetching farmer by ID:", err);
-        res.status(500).json({ error: err.message });
-    }
+    try { 
+        const item = await Farmer.findById(req.params.id).lean(); 
+        if (!item) return res.status(404).json({ error: "Farmer not found" });
+        res.json(item); 
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Farmer Active Batches Route (Fixes "Error loading batches!")
+// Farmer Active Batches
 router.get('/farmer-batches/:farmerId', async (req, res) => {
     try {
         const { farmerId } = req.params;
         const chicks = await Batch.find({ 
             $or: [{ farmerId }, { farmer }, { farmer_id: farmerId }] 
         }).lean();
-        
         res.json(chicks);
-    } catch (err) {
-        console.error("Error loading batches for farmer:", err);
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 
 // ==========================================
-// 2. REPORTS & SUMMARY ROUTES
+// 2. ENTRY & TRANSACTION ROUTES (Chicks, Daily, Feed, Sale)
 // ==========================================
 
-// Batch-wise Summary Report
+// Batches / Chicks Entry
+router.get('/batches', async (req, res) => {
+    try { res.json(await Batch.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
+});
+router.post('/batches', async (req, res) => {
+    try { const item = new Batch(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Daily Logs Entry
+router.post('/dailylogs', async (req, res) => {
+    try { const item = new DailyLog(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Transactions / Sales / Feed Entry
+router.get('/transactions', async (req, res) => {
+    try { res.json(await Transaction.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
+});
+router.post('/transactions', async (req, res) => {
+    try { const item = new Transaction(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
+// ==========================================
+// 3. REPORTS & SUMMARY ROUTES
+// ==========================================
+
 router.get('/reports/batch-summary', async (req, res) => {
     try {
         const chicks = await Batch.find().lean();
@@ -80,9 +113,7 @@ router.get('/reports/batch-summary', async (req, res) => {
         const sales = await Transaction.find().lean();
 
         const farmerMap = {};
-        farmers.forEach(f => {
-            farmerMap[f._id.toString()] = f;
-        });
+        farmers.forEach(f => { farmerMap[f._id.toString()] = f; });
 
         let report = chicks.map(c => {
             const batchNo = c.batchNo || c.batchNumber;
@@ -98,7 +129,6 @@ router.get('/reports/batch-summary', async (req, res) => {
 
             const totalMortality = logs.reduce((sum, l) => sum + (l.mortality || 0), 0);
             const totalFeedConsumed = logs.reduce((sum, l) => sum + (l.feedConsumedKg || l.feedConsumed || 0), 0);
-
             const totalSoldBirds = batchSales.reduce((sum, s) => sum + (s.birdsCount || s.quantity || 0), 0);
             const totalSoldWeight = batchSales.reduce((sum, s) => sum + (s.totalWeightKg || s.weight || 0), 0);
             const totalRevenue = batchSales.reduce((sum, s) => sum + (s.totalAmount || s.amount || 0), 0);
@@ -140,12 +170,10 @@ router.get('/reports/batch-summary', async (req, res) => {
 
         res.json(report);
     } catch (err) {
-        console.error("Batch Summary Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// Branch-wise Performance Report
 router.get('/reports/branch-summary', async (req, res) => {
     try {
         const chicks = await Batch.find().lean();
@@ -154,16 +182,12 @@ router.get('/reports/branch-summary', async (req, res) => {
         const sales = await Transaction.find().lean();
 
         const farmerMap = {};
-        farmers.forEach(f => {
-            farmerMap[f._id.toString()] = f;
-        });
+        farmers.forEach(f => { farmerMap[f._id.toString()] = f; });
 
         let branchMap = {};
-
         if (chicks && chicks.length > 0) {
             chicks.forEach(c => {
                 if (!c) return;
-                
                 const rawFarmerRef = c.farmerId || c.farmer || c.farmer_id;
                 let farmerObj = null;
                 if (rawFarmerRef) {
@@ -172,19 +196,11 @@ router.get('/reports/branch-summary', async (req, res) => {
                 }
 
                 const branchName = c.branch || (farmerObj && farmerObj.branch) || 'Main';
-
                 if (!branchMap[branchName]) {
                     branchMap[branchName] = {
-                        branch: branchName,
-                        totalBatches: 0,
-                        placedChicks: 0,
-                        totalMortality: 0,
-                        totalFeedIssued: 0,
-                        totalFeedConsumed: 0,
-                        totalSoldBirds: 0,
-                        totalSoldWeight: 0,
-                        totalRevenue: 0,
-                        liveBirdsCount: 0
+                        branch: branchName, totalBatches: 0, placedChicks: 0, totalMortality: 0,
+                        totalFeedIssued: 0, totalFeedConsumed: 0, totalSoldBirds: 0, totalSoldWeight: 0,
+                        totalRevenue: 0, liveBirdsCount: 0
                     };
                 }
 
@@ -214,23 +230,15 @@ router.get('/reports/branch-summary', async (req, res) => {
         let branchReport = Object.values(branchMap).map(b => {
             let mortalityPercent = b.placedChicks > 0 ? ((b.totalMortality / b.placedChicks) * 100).toFixed(1) : '0.0';
             let fcr = b.totalSoldWeight > 0 ? (b.totalFeedConsumed / b.totalSoldWeight).toFixed(2) : '0.00';
-            
-            return {
-                ...b,
-                mortalityPercent,
-                closingFeed: Math.max(0, b.totalFeedIssued - b.totalFeedConsumed),
-                fcr
-            };
+            return { ...b, mortalityPercent, closingFeed: Math.max(0, b.totalFeedIssued - b.totalFeedConsumed), fcr };
         });
 
         res.json(branchReport);
     } catch (err) {
-        console.error("Branch Summary Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// Farmer Ledger Report Route
 router.get('/reports/farmer-ledger/:farmerId', async (req, res) => {
     try {
         const { farmerId } = req.params;
@@ -238,9 +246,7 @@ router.get('/reports/farmer-ledger/:farmerId', async (req, res) => {
 
         const farmer = await Farmer.findById(farmerId);
         let queryFilter = { $or: [{ farmerId }, { farmer }, { farmer_id: farmerId }] };
-        if (batchNo && batchNo !== 'ALL') {
-            queryFilter.batchNo = batchNo;
-        }
+        if (batchNo && batchNo !== 'ALL') { queryFilter.batchNo = batchNo; }
 
         const chicks = await Batch.find(queryFilter);
         const feeds = []; 
