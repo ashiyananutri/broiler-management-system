@@ -77,6 +77,13 @@ function renderDashboard() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
 
     app.innerHTML = `
+        <style>
+            @media print {
+                aside, header, button, select, .no-print { display: none !important; }
+                body, #mainContent, #farmerLedgerOutput { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; width: 100% !important; }
+                #app { display: block !important; }
+            }
+        </style>
         <div class="flex h-screen bg-gray-100 overflow-hidden relative">
             <div id="sidebarOverlay" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden"></div>
 
@@ -797,11 +804,11 @@ async function loadReportView(reportType) {
 
         content.innerHTML = `
             <div class="max-w-4xl bg-white p-6 rounded-xl shadow-sm border border-gray-200 mx-auto">
-                <div class="mb-6 pb-3 border-b">
+                <div class="mb-6 pb-3 border-b no-print">
                     <h3 class="text-lg font-bold text-gray-800">Generate Farmer & Batch Ledger</h3>
                     <p class="text-xs text-gray-500">Farmer select karein, phir batch chun kar poori report dekhein</p>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 no-print">
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Select Farmer</label>
                         <select id="reportFarmerId" onchange="fetchBatchesForLedger(this.value)" class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm font-medium">${farmerOpts}</select>
@@ -813,7 +820,8 @@ async function loadReportView(reportType) {
                         </select>
                     </div>
                 </div>
-                <div class="text-right mb-4">
+                <div class="text-right mb-4 no-print flex justify-end gap-3">
+                    <button onclick="exportLedgerCSV()" class="bg-green-700 hover:bg-green-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition"><i class="fa-solid fa-file-excel mr-1"></i> Export to CSV</button>
                     <button onclick="generateFarmerLedger()" class="bg-purple-700 hover:bg-purple-800 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition"><i class="fa-solid fa-file-invoice mr-1"></i> View Ledger Report</button>
                 </div>
                 <div id="farmerLedgerOutput"></div>
@@ -836,6 +844,8 @@ async function fetchBatchesForLedger(farmerId) {
     } catch(e) {}
 }
 
+let activeLedgerData = null; // Store for CSV export
+
 async function generateFarmerLedger() {
     const farmerId = document.getElementById('reportFarmerId').value;
     const batchNo = document.getElementById('reportBatchNo').value;
@@ -848,7 +858,26 @@ async function generateFarmerLedger() {
     try {
         const res = await fetch(`/api/broiler/reports/farmer-ledger/${farmerId}?batchNo=${batchNo}`);
         const data = await res.json();
+        activeLedgerData = data; // Save data
         const { farmer, chicks, feeds, dailyLogs, sales } = data;
+
+        // Calculations for Daily Logs Summary
+        let totalPlacedChicks = chicks.reduce((sum, c) => sum + c.quantity, 0);
+        let totalFeedIssued = feeds.reduce((sum, f) => sum + f.quantity, 0);
+        let totalMortality = dailyLogs.reduce((sum, d) => sum + (d.mortality || 0), 0);
+        let totalFeedConsumed = dailyLogs.reduce((sum, d) => sum + (d.feedConsumedKg || 0), 0);
+        let closingFeed = totalFeedIssued - totalFeedConsumed;
+        let mortalityPercent = totalPlacedChicks > 0 ? ((totalMortality / totalPlacedChicks) * 100).toFixed(1) : '0.0';
+
+        // Avg Body Weight (average of recorded body weights)
+        let avgBodyWeight = dailyLogs.length > 0 ? (dailyLogs.reduce((sum, d) => sum + (d.bodyWeightGm || 0), 0) / dailyLogs.length).toFixed(1) : 0;
+        
+        let liveBirds = totalPlacedChicks - totalMortality;
+        let totalBodyWeightKg = ((liveBirds * avgBodyWeight) / 1000).toFixed(2);
+
+        // Total Sold Weight from Sales
+        let totalSoldWeight = sales.reduce((sum, s) => sum + (s.totalWeightKg || 0), 0);
+        let fcr = totalSoldWeight > 0 ? (totalFeedConsumed / totalSoldWeight).toFixed(2) : (totalBodyWeightKg > 0 ? (totalFeedConsumed / totalBodyWeightKg).toFixed(2) : '0.00');
 
         let chicksRows = chicks.map(c => `<tr><td class="p-2 border font-semibold">${c.batchNo}</td><td class="p-2 border">${c.quantity} Pcs</td><td class="p-2 border">${c.hatchery}</td><td class="p-2 border">${new Date(c.date).toLocaleDateString('en-IN')}</td></tr>`).join('');
         
@@ -859,14 +888,14 @@ async function generateFarmerLedger() {
         let saleRows = sales.map(s => `<tr><td class="p-2 border font-semibold">${s.batchNo}</td><td class="p-2 border">${s.traderId?.name || 'N/A'}</td><td class="p-2 border">${s.birdsCount} Pcs</td><td class="p-2 border">${s.totalWeightKg} Kg</td><td class="p-2 border">₹${s.ratePerKg}</td><td class="p-2 border font-bold text-green-700">₹${s.totalAmount}</td><td class="p-2 border">${new Date(s.date).toLocaleDateString('en-IN')}</td></tr>`).join('');
 
         output.innerHTML = `
-            <div class="mt-6 border-t pt-6">
+            <div class="mt-6 border-t pt-6 bg-white p-4 rounded-xl">
                 <div class="flex justify-between items-center mb-4 bg-gray-50 p-4 rounded-lg">
                     <div>
                         <h4 class="text-base font-bold text-gray-900">${farmer.name}</h4>
                         <p class="text-xs text-gray-600 mt-0.5">Farm ID: <strong>${farmer.farmId}</strong> | Branch: <strong>${farmer.branch}</strong> | Phone: ${farmer.phone}</p>
                         <p class="text-xs text-purple-700 mt-1">Selected Batch Filter: <strong>${batchNo}</strong></p>
                     </div>
-                    <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-xs font-semibold"><i class="fa-solid fa-print mr-1"></i> Print Ledger</button>
+                    <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-xs font-semibold no-print"><i class="fa-solid fa-print mr-1"></i> Print Ledger</button>
                 </div>
 
                 <div class="space-y-6 text-xs">
@@ -881,6 +910,16 @@ async function generateFarmerLedger() {
                     <div>
                         <h5 class="font-bold text-gray-700 mb-2 uppercase border-b pb-1">3. Daily Logs (Mortality & Consumption)</h5>
                         <table class="w-full text-left border bg-white">${dailyRows || '<tr><td colspan="6" class="p-3 text-center text-gray-400">No daily logs found</td></tr>'}</table>
+                        
+                        <!-- Daily Logs Summary Box -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 bg-blue-50 p-3 rounded-lg border border-blue-100 font-semibold text-gray-800">
+                            <div>Total Mortality: <span class="text-red-600">${totalMortality} Pcs (${mortalityPercent}%)</span></div>
+                            <div>Total Feed Consumed: <span class="text-blue-700">${totalFeedConsumed} Kg</span></div>
+                            <div>Closing Feed: <span class="text-purple-700">${closingFeed >= 0 ? closingFeed : 0} Kg</span></div>
+                            <div>Avg. Body Weight: <span class="text-green-700">${avgBodyWeight} gm</span></div>
+                            <div>Total Body Weight: <span class="text-green-800">${totalBodyWeightKg} Kg</span></div>
+                            <div>FCR Ratio: <span class="text-amber-700 font-bold">${fcr}</span></div>
+                        </div>
                     </div>
                     <div>
                         <h5 class="font-bold text-gray-700 mb-2 uppercase border-b pb-1">4. Sale & Revenue Summary</h5>
@@ -909,7 +948,48 @@ async function generateFarmerLedger() {
     }
 }
 
-// 7. DELETE TRANSACTION RECORD
+// 7. EXPORT LEDGER TO CSV (EXCEL)
+function exportLedgerCSV() {
+    if (!activeLedgerData || !activeLedgerData.farmer) {
+        return alert("⚠️ Kripya pehle Ledger Generate karein!");
+    }
+
+    const { farmer, chicks, feeds, dailyLogs, sales } = activeLedgerData;
+    let csvContent = "data:text/csv;charset=utf-8,";
+
+    csvContent += `Farmer Ledger Report\n`;
+    csvContent += `Farmer Name,${farmer.name},Farm ID,${farmer.farmId},Branch,${farmer.branch}\n\n`;
+
+    csvContent += `CHICKS PLACEMENT\nBatch No,Quantity,Hatchery,Date\n`;
+    chicks.forEach(c => {
+        csvContent += `${c.batchNo},${c.quantity},${c.hatchery},${new Date(c.date).toLocaleDateString('en-IN')}\n`;
+    });
+
+    csvContent += `\nFEED ISSUED\nBatch No,Item,Quantity,Date\n`;
+    feeds.forEach(f => {
+        csvContent += `${f.batchNo},${f.itemId?.name || 'Feed'},${f.quantity},${new Date(f.date).toLocaleDateString('en-IN')}\n`;
+    });
+
+    csvContent += `\nDAILY LOGS\nBatch No,Age,Mortality,Feed Consumed (Kg),Body Weight (gm),Date\n`;
+    dailyLogs.forEach(d => {
+        csvContent += `${d.batchNo},Day ${d.ageInDays},${d.mortality},${d.feedConsumedKg},${d.bodyWeightGm},${new Date(d.date).toLocaleDateString('en-IN')}\n`;
+    });
+
+    csvContent += `\nSALES SUMMARY\nBatch No,Trader,Birds,Weight (Kg),Rate,Amount,Date\n`;
+    sales.forEach(s => {
+        csvContent += `${s.batchNo},${s.traderId?.name || 'N/A'},${s.birdsCount},${s.totalWeightKg},${s.ratePerKg},${s.totalAmount},${new Date(s.date).toLocaleDateString('en-IN')}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Farmer_Ledger_${farmer.name.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// 8. DELETE TRANSACTION RECORD
 async function deleteTransaction(type, id) {
     if (!confirm(`Kya aap is ${type.toUpperCase()} entry ko delete karna chahte hain?`)) return;
 
@@ -927,7 +1007,7 @@ async function deleteTransaction(type, id) {
     } catch(err) { alert("Server error!"); }
 }
 
-// 8. DELETE MASTER RECORD
+// 9. DELETE MASTER RECORD
 async function deleteRecord(type, id) {
     if (!confirm("Kya aap sach me is record ko delete karna chahte hain?")) return;
     let url = '';
@@ -948,7 +1028,7 @@ async function deleteRecord(type, id) {
     } catch(err) { alert("Server error!"); }
 }
 
-// 9. OPEN EDIT FORM FOR MASTERS
+// 10. OPEN EDIT FORM FOR MASTERS
 async function openEditModal(type, id) {
     let apiGet = '';
     if (type === 'branch') apiGet = `/api/broiler/branches`;
