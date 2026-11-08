@@ -138,6 +138,22 @@ function renderDashboard() {
                             <a href="#" onclick="loadEntryView('sale'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-file-invoice-dollar text-xs"></i><span>Sale Entry</span></a>
                         </div>
                     </div>
+
+                    <!-- Reports Menu -->
+                    <div class="pt-2">
+                        <p class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Reports & Analytics</p>
+                        <button onclick="toggleReportMenu()" class="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 font-medium text-sm transition">
+                            <div class="flex items-center space-x-3">
+                                <i class="fa-solid fa-chart-column w-5 text-purple-500"></i>
+                                <span>Reports</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-down text-xs" id="reportChevron"></i>
+                        </button>
+                        <div id="reportSubmenu" class="pl-4 mt-1 space-y-1 hidden">
+                            <a href="#" onclick="loadReportView('batch'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-list-check text-xs"></i><span>Batch Summary Report</span></a>
+                            <a href="#" onclick="loadReportView('farmer'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-book text-xs"></i><span>Farmer Ledger</span></a>
+                        </div>
+                    </div>
                 </nav>
 
                 <div class="p-4 border-t border-gray-800">
@@ -193,6 +209,11 @@ function toggleMasterMenu() {
 function toggleEntryMenu() {
     document.getElementById('entrySubmenu').classList.toggle('hidden');
     document.getElementById('entryChevron').classList.toggle('rotate-180');
+}
+
+function toggleReportMenu() {
+    document.getElementById('reportSubmenu').classList.toggle('hidden');
+    document.getElementById('reportChevron').classList.toggle('rotate-180');
 }
 
 function autoFillBranch(selectObj) {
@@ -570,7 +591,6 @@ async function loadEntryView(type) {
         `;
     }
 
-    // Fetch existing entries for Delete view
     let existingEntries = [];
     try {
         const res = await fetch(getEndpoint);
@@ -698,7 +718,147 @@ async function loadEntryView(type) {
     });
 }
 
-// DELETE TRANSACTION RECORD (Chicks, Feed, Daily, Sale)
+
+// 6. REPORT VIEWS GENERATION
+async function loadReportView(reportType) {
+    const content = document.getElementById('mainContent');
+    const title = document.getElementById('pageTitle');
+
+    if (reportType === 'batch') {
+        title.textContent = 'Batch Performance & FCR Report';
+        content.innerHTML = `<div class="text-center py-10 font-semibold text-gray-500">Loading Batch Summary...</div>`;
+
+        try {
+            const res = await fetch('/api/broiler/reports/batch-summary');
+            const data = await res.json();
+
+            let rows = '';
+            data.forEach((b, i) => {
+                rows += `
+                    <tr class="border-b hover:bg-gray-50 text-xs md:text-sm">
+                        <td class="py-3 px-3">${i + 1}</td>
+                        <td class="py-3 px-3 font-semibold text-gray-900">${b.batchNo}</td>
+                        <td class="py-3 px-3">${b.farmerName} <span class="text-gray-400">(${b.farmId})</span></td>
+                        <td class="py-3 px-3">${b.branch}</td>
+                        <td class="py-3 px-3">${b.placedChicks}</td>
+                        <td class="py-3 px-3 text-red-600 font-semibold">${b.totalMortality} (${b.mortalityPercent}%)</td>
+                        <td class="py-3 px-3 font-medium text-blue-700">${b.totalFeedKg} Kg</td>
+                        <td class="py-3 px-3 font-medium text-green-700">${b.totalSoldWeight} Kg</td>
+                        <td class="py-3 px-3 font-bold text-amber-700 bg-amber-50 rounded">${b.fcr}</td>
+                        <td class="py-3 px-3 font-bold text-green-800">₹${b.totalRevenue.toLocaleString('en-IN')}</td>
+                    </tr>
+                `;
+            });
+
+            content.innerHTML = `
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-3 border-b gap-3">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800">Batch-wise Performance & FCR Report</h3>
+                            <p class="text-xs text-gray-500">Includes Mortality %, Total Feed Consumed, Sale Weight & FCR Ratio</p>
+                        </div>
+                        <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition"><i class="fa-solid fa-print mr-1"></i> Print Report</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[700px]">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 text-xs uppercase font-semibold">
+                                    <th class="py-3 px-3">#</th>
+                                    <th class="py-3 px-3">Batch No</th>
+                                    <th class="py-3 px-3">Farmer</th>
+                                    <th class="py-3 px-3">Branch</th>
+                                    <th class="py-3 px-3">Placed Chicks</th>
+                                    <th class="py-3 px-3">Mortality</th>
+                                    <th class="py-3 px-3">Feed Used</th>
+                                    <th class="py-3 px-3">Total Sale</th>
+                                    <th class="py-3 px-3">FCR</th>
+                                    <th class="py-3 px-3">Total Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows.length > 0 ? rows : `<tr><td colspan="10" class="text-center py-6 text-gray-400">No batch records found.</td></tr>`}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        } catch(e) {
+            content.innerHTML = `<div class="text-red-500 font-semibold p-4">Failed to load batch report!</div>`;
+        }
+    } 
+    else if (reportType === 'farmer') {
+        title.textContent = 'Farmer Ledger Report';
+        let farmerOpts = '<option value="">Select Farmer</option>';
+        try {
+            const res = await fetch('/api/broiler/farmers');
+            const farmers = await res.json();
+            farmers.forEach(f => farmerOpts += `<option value="${f._id}">${f.name} (${f.branch}) - ${f.farmId}</option>`);
+        } catch(e) {}
+
+        content.innerHTML = `
+            <div class="max-w-4xl bg-white p-6 rounded-xl shadow-sm border border-gray-200 mx-auto">
+                <div class="mb-6 pb-3 border-b">
+                    <h3 class="text-lg font-bold text-gray-800">Generate Farmer Ledger</h3>
+                    <p class="text-xs text-gray-500">Select a farmer to view complete flock performance & transaction history</p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                    <select id="reportFarmerId" class="flex-1 px-4 py-2.5 border rounded-lg bg-white text-sm font-medium">${farmerOpts}</select>
+                    <button onclick="generateFarmerLedger()" class="bg-purple-700 hover:bg-purple-800 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition"><i class="fa-solid fa-file-invoice mr-1"></i> View Ledger</button>
+                </div>
+                <div id="farmerLedgerOutput"></div>
+            </div>
+        `;
+    }
+}
+
+async function generateFarmerLedger() {
+    const farmerId = document.getElementById('reportFarmerId').value;
+    const output = document.getElementById('farmerLedgerOutput');
+    if (!farmerId) return alert("⚠️ Kripya Farmer select karein!");
+
+    output.innerHTML = `<div class="text-center py-6 text-gray-500">Loading ledger data...</div>`;
+
+    try {
+        const res = await fetch(`/api/broiler/reports/farmer-ledger/${farmerId}`);
+        const data = await res.json();
+        const { farmer, chicks, feeds, dailyLogs, sales } = data;
+
+        let chicksRows = chicks.map(c => `<tr><td class="p-2 border">${c.batchNo}</td><td class="p-2 border">${c.quantity} Pcs</td><td class="p-2 border">${c.hatchery}</td><td class="p-2 border">${new Date(c.date).toLocaleDateString('en-IN')}</td></tr>`).join('');
+        let feedRows = feeds.map(f => `<tr><td class="p-2 border">${f.batchNo}</td><td class="p-2 border">${f.itemId?.name || 'Feed'}</td><td class="p-2 border">${f.quantity} Bags/Kg</td><td class="p-2 border">${new Date(f.date).toLocaleDateString('en-IN')}</td></tr>`).join('');
+        let saleRows = sales.map(s => `<tr><td class="p-2 border">${s.batchNo}</td><td class="p-2 border">${s.traderId?.name || 'N/A'}</td><td class="p-2 border">${s.birdsCount} Pcs</td><td class="p-2 border">${s.totalWeightKg} Kg</td><td class="p-2 border">₹${s.ratePerKg}</td><td class="p-2 border font-bold">₹${s.totalAmount}</td></tr>`).join('');
+
+        output.innerHTML = `
+            <div class="mt-6 border-t pt-6">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h4 class="text-base font-bold text-gray-900">${farmer.name}</h4>
+                        <p class="text-xs text-gray-500">Farm ID: ${farmer.farmId} | Branch: ${farmer.branch} | Phone: ${farmer.phone}</p>
+                    </div>
+                    <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-semibold"><i class="fa-solid fa-print"></i> Print</button>
+                </div>
+
+                <div class="space-y-6 text-xs">
+                    <div>
+                        <h5 class="font-bold text-gray-700 mb-2 uppercase border-b pb-1">Chicks Placements</h5>
+                        <table class="w-full text-left border">${chicksRows || '<tr><td colspan="4" class="p-2 text-center text-gray-400">No chicks placement record</td></tr>'}</table>
+                    </div>
+                    <div>
+                        <h5 class="font-bold text-gray-700 mb-2 uppercase border-b pb-1">Feed Issued</h5>
+                        <table class="w-full text-left border">${feedRows || '<tr><td colspan="4" class="p-2 text-center text-gray-400">No feed issued record</td></tr>'}</table>
+                    </div>
+                    <div>
+                        <h5 class="font-bold text-gray-700 mb-2 uppercase border-b pb-1">Sale Summary</h5>
+                        <table class="w-full text-left border">${saleRows || '<tr><td colspan="6" class="p-2 text-center text-gray-400">No sale record</td></tr>'}</table>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch(e) {
+        output.innerHTML = `<div class="text-red-500 p-4">Error loading ledger!</div>`;
+    }
+}
+
+// 7. DELETE TRANSACTION RECORD
 async function deleteTransaction(type, id) {
     if (!confirm(`Kya aap is ${type.toUpperCase()} entry ko delete karna chahte hain?`)) return;
 
@@ -716,7 +876,7 @@ async function deleteTransaction(type, id) {
     } catch(err) { alert("Server error!"); }
 }
 
-// 6. DELETE MASTER RECORD
+// 8. DELETE MASTER RECORD
 async function deleteRecord(type, id) {
     if (!confirm("Kya aap sach me is record ko delete karna chahte hain?")) return;
     let url = '';
@@ -737,7 +897,7 @@ async function deleteRecord(type, id) {
     } catch(err) { alert("Server error!"); }
 }
 
-// 7. OPEN EDIT FORM FOR MASTERS
+// 9. OPEN EDIT FORM FOR MASTERS
 async function openEditModal(type, id) {
     let apiGet = '';
     if (type === 'branch') apiGet = `/api/broiler/branches`;
