@@ -4,11 +4,123 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Broiler Management System</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-100 font-sans">
-    <div id="app"></div>
-    <script src="app.js"></script>
+    <div id="app" class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-indigo-600 text-white p-4 shadow-md flex justify-between items-center">
+            <h1 class="text-xl font-bold">Broiler Poultry Management System</h1>
+            <span id="user-info" class="text-sm">Welcome, Admin</span>
+        </header>
+
+        <!-- Main Dashboard Container -->
+        <div class="flex flex-1">
+            <!-- Sidebar -->
+            <aside class="w-64 bg-white shadow-md p-4 hidden md:block">
+                <nav class="space-y-2">
+                    <a href="#" class="block p-2 rounded hover:bg-indigo-50 text-indigo-600 font-semibold">Dashboard</a>
+                    <a href="#" class="block p-2 rounded hover:bg-gray-100 text-gray-700">Master Creation</a>
+                    <a href="#" class="block p-2 rounded hover:bg-gray-100 text-gray-700">Farmers</a>
+                    <a href="#" class="block p-2 rounded hover:bg-gray-100 text-gray-700">Reports</a>
+                </nav>
+            </aside>
+
+            <!-- Dynamic Content Area -->
+            <main class="flex-1 p-6">
+                <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-bold mb-4 text-gray-800">Create New Farmer</h2>
+                    
+                    <form id="farmerForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Supervisor / User</label>
+                            <select id="supervisorSelect" name="supervisor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                                <option value="">Select Supervisor</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Farmer Name</label>
+                            <input type="text" id="farmerName" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Phone</label>
+                            <input type="text" id="farmerPhone" name="phone" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Village / Location</label>
+                            <input type="text" id="farmerVillage" name="village" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Shed Capacity</label>
+                            <input type="number" id="shedCapacity" name="shedCapacity" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        </div>
+
+                        <button type="submit" class="w-full bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 font-semibold">
+                            Save Farmer Record
+                        </button>
+                    </form>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Frontend Script to Fetch Users/Supervisors Dynamically -->
+    <script>
+        async function loadSupervisors() {
+            try {
+                // Fetching from backend normalized users endpoint
+                const response = await fetch('/api/users');
+                const users = await response.json();
+                
+                const selectDropdown = document.getElementById('supervisorSelect');
+                selectDropdown.innerHTML = '<option value="">Select Supervisor</option>';
+                
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user._id || user.id;
+                    option.textContent = user.name || user.username;
+                    selectDropdown.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Error loading supervisors:", error);
+            }
+        }
+
+        // Handle Farmer Form Submission
+        document.getElementById('farmerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                supervisor: document.getElementById('supervisorSelect').value,
+                name: document.getElementById('farmerName').value,
+                phone: document.getElementById('farmerPhone').value,
+                village: document.getElementById('farmerVillage').value,
+                shedCapacity: document.getElementById('shedCapacity').value
+            };
+
+            try {
+                const res = await fetch('/api/farmers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                if (res.ok) {
+                    alert('Farmer created successfully!');
+                    document.getElementById('farmerForm').reset();
+                } else {
+                    alert('Error saving farmer record.');
+                }
+            } catch (err) {
+                console.error("Submission error:", err);
+            }
+        });
+
+        // Initialize on load
+        window.onload = loadSupervisors;
+    </script>
 </body>
 </html>
