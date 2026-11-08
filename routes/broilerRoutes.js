@@ -63,15 +63,24 @@ router.get('/farmers/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Farmer Active Batches
-router.get('/farmer-batches/:farmerId', async (req, res) => {
+// Flexible Farmer Active Batches Route (Fixes "Error loading batches!")
+router.get(['/farmer-batches/:farmerId', '/api/farmer-batches/:farmerId'], async (req, res) => {
     try {
         const { farmerId } = req.params;
         const chicks = await Batch.find({ 
-            $or: [{ farmerId }, { farmer }, { farmer_id: farmerId }] 
+            $or: [
+                { farmerId: farmerId },
+                { farmer: farmerId },
+                { farmer_id: farmerId },
+                { "farmer._id": farmerId }
+            ] 
         }).lean();
+        
         res.json(chicks);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) { 
+        console.error("Error loading batches for farmer:", err);
+        res.status(500).json({ error: err.message }); 
+    }
 });
 
 
