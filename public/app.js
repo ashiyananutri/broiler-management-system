@@ -72,7 +72,7 @@ function renderLogin() {
     });
 }
 
-// 2. RENDER PROFESSIONAL DASHBOARD
+// 2. RENDER PROFESSIONAL DASHBOARD (Responsive Mobile Support)
 function renderDashboard() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -386,7 +386,7 @@ async function openAddForm(type) {
     });
 }
 
-// 5. ENTRY SECTION VIEW & SUBMISSION (With Dates)
+// 5. ENTRY SECTION VIEW & SUBMISSION (With Auto Batch Preview and Dates)
 async function loadEntryView(type) {
     const content = document.getElementById('mainContent');
     const title = document.getElementById('pageTitle');
@@ -409,7 +409,11 @@ async function loadEntryView(type) {
 
         formFields = `
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer</label><select id="chicksFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Batch / Lot No (Auto Generated)</label><input type="text" id="batchNo" readonly placeholder="Auto Generated" class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-sm"></div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Batch / Lot No</label>
+                <input type="text" id="batchNoDisplay" readonly value="System Auto-Generated on Submit (e.g. BATCH-001)" class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-gray-500 text-sm">
+                <p class="text-xs text-gray-500 mt-1">Yeh batch number submit hone par database dwara auto assign ho jayega.</p>
+            </div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Entry Date (Optional - Today if blank)</label><input type="date" id="entryDate" class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Chicks Quantity</label><input type="number" id="chicksQty" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Hatchery Name</label><input type="text" id="hatcheryName" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
