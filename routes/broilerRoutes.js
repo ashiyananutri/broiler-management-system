@@ -53,26 +53,32 @@ router.get('/farmer-batches/:farmerId', async (req, res) => {
 });
 
 
-// --- TRANSACTION / ENTRY ROUTES ---
+// --- TRANSACTION GET & DELETE ROUTES ---
 
 // 1. Chicks Entry
+router.get('/chicks-entry', async (req, res) => {
+    res.json(await ChicksEntry.find().populate('farmerId', 'name farmId branch'));
+});
 router.post('/chicks-entry', async (req, res) => {
     try {
         const count = await ChicksEntry.countDocuments();
         const batchNo = `BATCH-${String(count + 1).padStart(3, '0')}`;
-        
         let entryData = { ...req.body, batchNo };
         if (!entryData.date) entryData.date = new Date();
-
         const entry = new ChicksEntry(entryData);
         await entry.save();
         res.status(201).json({ message: 'Chicks entry saved successfully!', entry });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+router.delete('/chicks-entry/:id', async (req, res) => {
+    try { await ChicksEntry.findByIdAndDelete(req.params.id); res.json({ message: 'Deleted' }); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // 2. Feed Out Request
+router.get('/feed-request', async (req, res) => {
+    res.json(await FeedRequest.find().populate('farmerId', 'name').populate('itemId', 'name unit'));
+});
 router.post('/feed-request', async (req, res) => {
     try {
         const { branch, farmerId, batchNo, itemId, quantity, sentBy, date } = req.body;
@@ -80,53 +86,54 @@ router.post('/feed-request', async (req, res) => {
         if (!farmer || !farmer.supervisorId) {
             return res.status(400).json({ message: 'Farmer has no assigned supervisor!' });
         }
-
-        let feedData = {
-            branch, farmerId, batchNo, itemId, quantity, sentBy,
-            supervisorId: farmer.supervisorId,
-            status: 'Pending'
-        };
+        let feedData = { branch, farmerId, batchNo, itemId, quantity, sentBy, supervisorId: farmer.supervisorId, status: 'Pending' };
         if (date) feedData.date = date;
-
         const feedReq = new FeedRequest(feedData);
         await feedReq.save();
         res.status(201).json({ message: 'Feed sent for supervisor approval successfully!', feedReq });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+router.delete('/feed-request/:id', async (req, res) => {
+    try { await FeedRequest.findByIdAndDelete(req.params.id); res.json({ message: 'Deleted' }); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // 3. Daily Entry
+router.get('/daily-entry', async (req, res) => {
+    res.json(await DailyEntry.find().populate('farmerId', 'name'));
+});
 router.post('/daily-entry', async (req, res) => {
     try {
         let entryData = { ...req.body };
         if (!entryData.date) entryData.date = new Date();
-
         const entry = new DailyEntry(entryData);
         await entry.save();
         res.status(201).json({ message: 'Daily log recorded successfully!', entry });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+router.delete('/daily-entry/:id', async (req, res) => {
+    try { await DailyEntry.findByIdAndDelete(req.params.id); res.json({ message: 'Deleted' }); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // 4. Sale Entry
+router.get('/sale-entry', async (req, res) => {
+    res.json(await SaleEntry.find().populate('farmerId', 'name').populate('traderId', 'name'));
+});
 router.post('/sale-entry', async (req, res) => {
     try {
         const { branch, farmerId, batchNo, traderId, birdsCount, totalWeightKg, ratePerKg, soldBy, date } = req.body;
         const totalAmount = totalWeightKg * ratePerKg;
-        
-        let saleData = {
-            branch, farmerId, batchNo, traderId, birdsCount, totalWeightKg, ratePerKg, totalAmount, soldBy
-        };
+        let saleData = { branch, farmerId, batchNo, traderId, birdsCount, totalWeightKg, ratePerKg, totalAmount, soldBy };
         if (date) saleData.date = date;
-
         const sale = new SaleEntry(saleData);
         await sale.save();
         res.status(201).json({ message: 'Sale entry recorded successfully!', sale });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+router.delete('/sale-entry/:id', async (req, res) => {
+    try { await SaleEntry.findByIdAndDelete(req.params.id); res.json({ message: 'Deleted' }); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 module.exports = router;
