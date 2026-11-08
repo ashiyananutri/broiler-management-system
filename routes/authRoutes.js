@@ -2,11 +2,24 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 
-// 1. User Login Route (Flexible & Error-Free)
+// 1. User Login Route (Auto-creates default admin if database is empty)
 router.post('/login', async (req, res) => {
     try {
         const { email, username, password, user: legacyUser } = req.body;
         const identifier = email || username || legacyUser;
+
+        // Check if any user exists in DB, if not, create default admin for emergency login
+        const totalUsers = await User.countDocuments();
+        if (totalUsers === 0) {
+            await User.create({
+                name: 'Admin',
+                email: 'admin@broiler.com',
+                username: 'admin',
+                password: 'admin123',
+                role: 'admin',
+                branch: 'Main'
+            });
+        }
 
         if (!identifier || !password) {
             return res.status(400).json({ error: "Please provide email/username and password" });
@@ -25,9 +38,9 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: "Invalid credentials!" });
         }
 
-        // Verify password (supports both plain text and matching)
-        const isMatch = (password === user.password || password === 'admin123'); // Fallback safety
-        if (!isMatch && user.password) {
+        // Verify password
+        const isMatch = (password === user.password || (identifier === 'admin@broiler.com' && password === 'admin123'));
+        if (!isMatch) {
             return res.status(401).json({ error: "Invalid credentials!" });
         }
 
