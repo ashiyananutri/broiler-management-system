@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { ChicksEntry, FeedRequest, DailyEntry, SaleEntry, Branch, Farmer, Trader, Item } = require('../models/BroilerModels');
 
-// 1. Batch-wise Summary Report (FCR, Mortality %, Feed Issued, Closing Feed, Live Birds)
+// 1. Batch-wise Summary Report
 router.get('/reports/batch-summary', async (req, res) => {
     try {
         const chicks = await ChicksEntry.find().populate('farmerId', 'name farmId branch');
@@ -17,37 +17,24 @@ router.get('/reports/batch-summary', async (req, res) => {
             const batchSales = sales.filter(s => s.batchNo === batchNo);
 
             const totalMortality = logs.reduce((sum, l) => sum + (l.mortality || 0), 0);
-            
-            // Total Feed Issued from Godown (`FeedRequest`)
             const totalFeedIssued = batchFeeds.reduce((sum, f) => sum + (f.quantity || 0), 0);
-            
-            // Total Feed Consumed from Daily Logs
             const totalFeedConsumed = logs.reduce((sum, l) => sum + (l.feedConsumedKg || 0), 0);
 
             const totalSoldBirds = batchSales.reduce((sum, s) => sum + (s.birdsCount || 0), 0);
             const totalSoldWeight = batchSales.reduce((sum, s) => sum + (s.totalWeightKg || 0), 0);
             const totalRevenue = batchSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
 
-            // Live Birds Calculation
             const liveBirds = c.quantity - totalMortality - totalSoldBirds;
-
-            // Closing Feed Calculation = Total Feed Issued - Total Feed Consumed
             const closingFeed = totalFeedIssued - totalFeedConsumed;
 
-            // Latest Body Weight from Daily Logs (Gram)
             let latestBodyWeightGm = 0;
             if (logs.length > 0) {
                 const sortedLogs = [...logs].sort((a, b) => (b.ageInDays || 0) - (a.ageInDays || 0));
                 latestBodyWeightGm = sortedLogs[0].bodyWeightGm || 0;
             }
 
-            // Total Estimated Live Weight (Kg)
             const liveWeightKg = ((liveBirds * latestBodyWeightGm) / 1000);
-
-            // Total Effective Weight (Sold Weight + Current Live Weight)
             const totalEffectiveWeightKg = totalSoldWeight + liveWeightKg;
-
-            // FCR Calculation = Total Feed Consumed / Total Effective Weight
             const fcr = totalEffectiveWeightKg > 0 ? (totalFeedConsumed / totalEffectiveWeightKg).toFixed(2) : '0.00';
             const mortalityPercent = c.quantity > 0 ? ((totalMortality / c.quantity) * 100).toFixed(1) : '0.0';
 
@@ -139,6 +126,40 @@ router.get('/reports/branch-summary', async (req, res) => {
         });
 
         res.json(branchReport);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 3. Farmer Ledger Report Route
+router.get('/reports/farmer-ledger/:farmerId', async (req, res) => {
+    try {
+        const { farmerId } = req.params;
+        const { batchNo } = req.query;
+
+        const farmer = await Farmer.findById(farmerId).populate('supervisorId', 'name branch');
+        let queryFilter = { farmerId };
+        if (batchNo && batchNo !== 'ALL') {
+            queryFilter.batchNo = batchNo;
+        }
+
+        const chicks = await ChicksEntry.find(queryFilter);
+        const feeds = await FeedRequest.find(queryFilter).populate('itemId', 'name unit');
+        const dailyLogs = await DailyEntry.find(queryFilter);
+        const sales = await SaleEntry.find(queryFilter).populate('traderId', 'name marketArea');
+
+        res.json({ farmer, chicks, feeds, dailyLogs, sales });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 4. Farmer Active Batches Route
+router.get('/farmer-batches/:farmerId', async (req, res) => {
+    try {
+        const { farmerId } = req.params;
+        const chicks = await ChicksEntry.find({ farmerId });
+        res.json(chicks);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
