@@ -15,18 +15,29 @@ const User = require('../models/User');
 // 1. Batch-wise Summary Report
 router.get('/reports/batch-summary', async (req, res) => {
     try {
-        const chicks = await Batch.find().populate({
-            path: 'farmerId',
-            select: 'name farmId branch',
-            options: { lean: true }
-        });
+        const chicks = await Batch.find().lean();
+        const farmers = await Farmer.find().lean();
         const dailyLogs = await DailyLog.find().lean();
         const sales = await Transaction.find().lean();
+
+        // Create a lookup map for farmers by ID and also by name/code if needed
+        const farmerMap = {};
+        farmers.forEach(f => {
+            farmerMap[f._id.toString()] = f;
+        });
 
         let report = chicks.map(c => {
             const batchNo = c.batchNo || c.batchNumber;
             const logs = dailyLogs.filter(d => d && d.batchNo === batchNo);
             const batchSales = sales.filter(s => s && s.batchNo === batchNo);
+
+            // Find farmer info safely using multiple possible keys
+            const rawFarmerRef = c.farmerId || c.farmer || c.farmer_id;
+            let farmerObj = null;
+            if (rawFarmerRef) {
+                const farmerKey = typeof rawFarmerRef === 'object' ? rawFarmerRef._id?.toString() : rawFarmerRef.toString();
+                farmerObj = farmerMap[farmerKey] || (typeof rawFarmerRef === 'object' ? rawFarmerRef : null);
+            }
 
             const totalMortality = logs.reduce((sum, l) => sum + (l.mortality || 0), 0);
             const totalFeedConsumed = logs.reduce((sum, l) => sum + (l.feedConsumedKg || l.feedConsumed || 0), 0);
@@ -53,9 +64,9 @@ router.get('/reports/batch-summary', async (req, res) => {
 
             return {
                 batchNo: batchNo,
-                farmerName: c.farmerId ? c.farmerId.name : 'N/A',
-                farmId: c.farmerId ? c.farmerId.farmId : 'N/A',
-                branch: c.branch || (c.farmerId && c.farmerId.branch) || 'Main',
+                farmerName: farmerObj ? (farmerObj.name || farmerObj.farmerName) : (c.farmerName || 'N/A'),
+                farmId: farmerObj ? (farmerObj.farmId || farmerObj.code) : (c.farmId || 'N/A'),
+                branch: c.branch || (farmerObj && farmerObj.branch) || 'Main',
                 placedChicks: placedQty,
                 liveBirds: liveBirds >= 0 ? liveBirds : 0,
                 totalMortality,
@@ -77,23 +88,33 @@ router.get('/reports/batch-summary', async (req, res) => {
     }
 });
 
-// 2. Branch-wise Performance Report (With Safe Checks & Fallback)
+// 2. Branch-wise Performance Report
 router.get('/reports/branch-summary', async (req, res) => {
     try {
-        const chicks = await Batch.find().populate({
-            path: 'farmerId',
-            select: 'name farmId branch',
-            options: { lean: true }
-        });
+        const chicks = await Batch.find().lean();
+        const farmers = await Farmer.find().lean();
         const dailyLogs = await DailyLog.find().lean();
         const sales = await Transaction.find().lean();
+
+        const farmerMap = {};
+        farmers.forEach(f => {
+            farmerMap[f._id.toString()] = f;
+        });
 
         let branchMap = {};
 
         if (chicks && chicks.length > 0) {
             chicks.forEach(c => {
                 if (!c) return;
-                const branchName = c.branch || (c.farmerId && c.farmerId.branch) || 'Main';
+                
+                const rawFarmerRef = c.farmerId || c.farmer || c.farmer_id;
+                let farmerObj = null;
+                if (rawFarmerRef) {
+                    const farmerKey = typeof rawFarmerRef === 'object' ? rawFarmerRef._id?.toString() : rawFarmerRef.toString();
+                    farmerObj = farmerMap[farmerKey] || (typeof rawFarmerRef === 'object' ? rawFarmerRef : null);
+                }
+
+                const branchName = c.branch || (farmerObj && farmerObj.branch) || 'Main';
 
                 if (!branchMap[branchName]) {
                     branchMap[branchName] = {
@@ -159,7 +180,7 @@ router.get('/reports/farmer-ledger/:farmerId', async (req, res) => {
         const { batchNo } = req.query;
 
         const farmer = await Farmer.findById(farmerId);
-        let queryFilter = { farmerId };
+        let queryFilter = { $or: [{ farmerId }, { farmer }, { farmer_id: farmerId }] };
         if (batchNo && batchNo !== 'ALL') {
             queryFilter.batchNo = batchNo;
         }
@@ -179,7 +200,7 @@ router.get('/reports/farmer-ledger/:farmerId', async (req, res) => {
 router.get('/farmer-batches/:farmerId', async (req, res) => {
     try {
         const { farmerId } = req.params;
-        const chicks = await Batch.find({ farmerId });
+        const chicks = await Batch.find({ $or: [{ farmerId }, { farmer }, { farmer_id: farmerId }] });
         res.json(chicks);
     } catch (err) {
         res.status(500).json({ error: err.message });
