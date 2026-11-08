@@ -42,10 +42,10 @@ router.put('/items/:id', async (req, res) => res.json(await Item.findByIdAndUpda
 router.delete('/items/:id', async (req, res) => { await Item.findByIdAndDelete(req.params.id); res.json({message: "Deleted"}); });
 
 
-// --- HELPER: GET BATCHES BY FARMER ID ---
+// --- HELPER: GET BATCHES WITH PLACEMENT DATE ---
 router.get('/farmer-batches/:farmerId', async (req, res) => {
     try {
-        const batches = await ChicksEntry.find({ farmerId: req.params.farmerId }, 'batchNo quantity createdAt');
+        const batches = await ChicksEntry.find({ farmerId: req.params.farmerId }, 'batchNo quantity date createdAt');
         res.json(batches);
     } catch (err) {
         res.status(500).json({ error: err.message });
