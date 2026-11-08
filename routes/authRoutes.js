@@ -2,48 +2,53 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 
-// Get All Users Route (Direct array return for admin panel table)
+// Get All Users Route (Strictly from Database, no defaults)
 router.get(['/', '/users', '/all', '/get-users'], async (req, res) => {
     try {
         const users = await User.find().lean();
-        res.json(users);
+        
+        // Formatting for dropdowns and admin tables
+        const formattedUsers = users.map(u => ({
+            _id: u._id,
+            id: u._id,
+            name: u.name || u.username || 'User',
+            username: u.username || u.name || '',
+            role: u.role || 'user',
+            branch: u.branch || 'Main'
+        }));
+
+        res.json(formattedUsers);
     } catch (err) {
         console.error("Error fetching users:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// Foolproof Login Route (Never returns 401 Unauthorized error)
+// Standard Login Route (Strict database check)
 router.post('/login', async (req, res) => {
     try {
         const { email, username, password, user: legacyUser } = req.body;
         const identifier = email || username || legacyUser;
 
-        let dbUser = null;
-        if (identifier) {
-            dbUser = await User.findOne({
-                $or: [
-                    { email: identifier },
-                    { username: identifier },
-                    { name: identifier }
-                ]
-            }).lean();
+        if (!identifier) {
+            return res.status(400).json({ error: "Please provide email or username" });
         }
 
-        // If specific user not found, grab the very first user from database
+        const dbUser = await User.findOne({
+            $or: [
+                { email: identifier },
+                { username: identifier },
+                { name: identifier }
+            ]
+        }).lean();
+
         if (!dbUser) {
-            dbUser = await User.findOne().lean();
+            return res.status(401).json({ error: "User not found in database!" });
         }
 
-        // Ultimate fallback so login NEVER fails
-        if (!dbUser) {
-            dbUser = {
-                _id: 'fallback_id_999',
-                name: 'Admin',
-                email: 'admin@broiler.com',
-                role: 'admin',
-                branch: 'Main'
-            };
+        // Optional password check if password field exists in your schema
+        if (password && dbUser.password && password !== dbUser.password) {
+            return res.status(401).json({ error: "Invalid password!" });
         }
 
         res.status(200).json({
@@ -51,22 +56,19 @@ router.post('/login', async (req, res) => {
             success: true,
             user: {
                 id: dbUser._id,
-                name: dbUser.name || dbUser.username || 'Admin',
-                email: dbUser.email || 'admin@broiler.com',
-                role: dbUser.role || 'admin',
+                name: dbUser.name || dbUser.username,
+                email: dbUser.email,
+                role: dbUser.role || 'user',
                 branch: dbUser.branch || 'Main'
             }
         });
     } catch (err) {
         console.error("Login Error:", err);
-        res.status(200).json({
-            success: true,
-            user: { id: 'error_fallback', name: 'Admin', role: 'admin', branch: 'Main' }
-        });
+        res.status(500).json({ error: err.message });
     }
 });
 
-// Register / Create User Route (Saves directly to database and returns saved object)
+// Register / Create User Route (Saves strictly to database)
 router.post(['/', '/register', '/users'], async (req, res) => {
     try {
         const newUser = new User(req.body);
