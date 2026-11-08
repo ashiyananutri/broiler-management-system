@@ -2,15 +2,11 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 
-// 1. User Login Route (Auto-creates default admin if database is empty)
-router.post('/login', async (req, res) => {
+// Helper to ensure default admin exists
+async function ensureDefaultAdmin() {
     try {
-        const { email, username, password, user: legacyUser } = req.body;
-        const identifier = email || username || legacyUser;
-
-        // Check if any user exists in DB, if not, create default admin for emergency login
-        const totalUsers = await User.countDocuments();
-        if (totalUsers === 0) {
+        const count = await User.countDocuments();
+        if (count === 0) {
             await User.create({
                 name: 'Admin',
                 email: 'admin@broiler.com',
@@ -19,14 +15,37 @@ router.post('/login', async (req, res) => {
                 role: 'admin',
                 branch: 'Main'
             });
+            console.log("Default Admin created successfully.");
         }
+    } catch (err) {
+        console.error("Error creating default admin:", err);
+    }
+}
+
+// 1. Get All Users Route (Supports both '/' and '/users')
+router.get(['/', '/users'], async (req, res) => {
+    try {
+        await ensureDefaultAdmin();
+        const users = await User.find().lean();
+        res.json(users);
+    } catch (err) {
+        console.error("Error fetching users:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. User Login Route
+router.post('/login', async (req, res) => {
+    try {
+        await ensureDefaultAdmin();
+        const { email, username, password, user: legacyUser } = req.body;
+        const identifier = email || username || legacyUser;
 
         if (!identifier || !password) {
             return res.status(400).json({ error: "Please provide email/username and password" });
         }
 
-        // Find user by email or username or name
-        const user = await User.findOne({
+        const dbUser = await User.findOne({
             $or: [
                 { email: identifier },
                 { username: identifier },
@@ -34,12 +53,11 @@ router.post('/login', async (req, res) => {
             ]
         }).lean();
 
-        if (!user) {
+        if (!dbUser) {
             return res.status(401).json({ error: "Invalid credentials!" });
         }
 
-        // Verify password
-        const isMatch = (password === user.password || (identifier === 'admin@broiler.com' && password === 'admin123'));
+        const isMatch = (password === dbUser.password || (identifier === 'admin@broiler.com' && password === 'admin123'));
         if (!isMatch) {
             return res.status(401).json({ error: "Invalid credentials!" });
         }
@@ -47,11 +65,11 @@ router.post('/login', async (req, res) => {
         res.json({
             message: "Login successful",
             user: {
-                id: user._id,
-                name: user.name || user.username || 'Admin',
-                email: user.email,
-                role: user.role || 'admin',
-                branch: user.branch || 'Main'
+                id: dbUser._id,
+                name: dbUser.name || dbUser.username || 'Admin',
+                email: dbUser.email,
+                role: dbUser.role || 'admin',
+                branch: dbUser.branch || 'Main'
             }
         });
     } catch (err) {
@@ -60,25 +78,14 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// 2. Register / Create User Route
-router.post('/register', async (req, res) => {
+// 3. Register / Create User Route
+router.post(['/', '/register'], async (req, res) => {
     try {
         const newUser = new User(req.body);
         const savedUser = await newUser.save();
         res.status(201).json(savedUser);
     } catch (err) {
         console.error("Registration Error:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// 3. Get All Users Route
-router.get('/', async (req, res) => {
-    try {
-        const users = await User.find().lean();
-        res.json(users);
-    } catch (err) {
-        console.error("Error fetching users:", err);
         res.status(500).json({ error: err.message });
     }
 });
