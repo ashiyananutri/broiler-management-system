@@ -1,3 +1,7 @@
+const express = require('express');
+const router = express.Router();
+const { ChicksEntry, FeedRequest, DailyEntry, SaleEntry, Branch, Farmer, Trader, Item } = require('../models/BroilerModels');
+
 // 1. Batch-wise Summary Report (FCR, Mortality %, Feed Issued, Closing Feed, Live Birds)
 router.get('/reports/batch-summary', async (req, res) => {
     try {
@@ -14,14 +18,11 @@ router.get('/reports/batch-summary', async (req, res) => {
 
             const totalMortality = logs.reduce((sum, l) => sum + (l.mortality || 0), 0);
             
-            // 1. Total Feed Issued from Godown (`FeedRequest`)
+            // Total Feed Issued from Godown (`FeedRequest`)
             const totalFeedIssued = batchFeeds.reduce((sum, f) => sum + (f.quantity || 0), 0);
             
-            // 2. Total Feed Consumed from Daily Logs
+            // Total Feed Consumed from Daily Logs
             const totalFeedConsumed = logs.reduce((sum, l) => sum + (l.feedConsumedKg || 0), 0);
-
-            // Agar Godown se feed issue nahi hua par daily log me entry hai, toh fallback
-            const totalFeedKg = totalFeedIssued > 0 ? totalFeedIssued : totalFeedConsumed;
 
             const totalSoldBirds = batchSales.reduce((sum, s) => sum + (s.birdsCount || 0), 0);
             const totalSoldWeight = batchSales.reduce((sum, s) => sum + (s.totalWeightKg || 0), 0);
@@ -30,7 +31,7 @@ router.get('/reports/batch-summary', async (req, res) => {
             // Live Birds Calculation
             const liveBirds = c.quantity - totalMortality - totalSoldBirds;
 
-            // Closing Feed Calculation = Total Feed Issued - Total Feed Consumed in Daily Logs
+            // Closing Feed Calculation = Total Feed Issued - Total Feed Consumed
             const closingFeed = totalFeedIssued - totalFeedConsumed;
 
             // Latest Body Weight from Daily Logs (Gram)
@@ -43,11 +44,10 @@ router.get('/reports/batch-summary', async (req, res) => {
             // Total Estimated Live Weight (Kg)
             const liveWeightKg = ((liveBirds * latestBodyWeightGm) / 1000);
 
-            // Total Weight (Sold Weight + Current Live Weight of remaining birds)
+            // Total Effective Weight (Sold Weight + Current Live Weight)
             const totalEffectiveWeightKg = totalSoldWeight + liveWeightKg;
 
-            // FCR Calculation = Total Feed Consumed / Total Effective Weight (Sold + Live Estimated)
-            // Agar effective weight 0 hai, toh FCR 0.00 rahega
+            // FCR Calculation = Total Feed Consumed / Total Effective Weight
             const fcr = totalEffectiveWeightKg > 0 ? (totalFeedConsumed / totalEffectiveWeightKg).toFixed(2) : '0.00';
             const mortalityPercent = c.quantity > 0 ? ((totalMortality / c.quantity) * 100).toFixed(1) : '0.0';
 
@@ -60,7 +60,7 @@ router.get('/reports/batch-summary', async (req, res) => {
                 liveBirds: liveBirds >= 0 ? liveBirds : 0,
                 totalMortality,
                 mortalityPercent,
-                totalFeedKg: totalFeedConsumed, // Displaying actual consumed feed in report
+                totalFeedKg: totalFeedConsumed,
                 totalFeedIssued,
                 closingFeed: closingFeed >= 0 ? closingFeed : 0,
                 totalSoldBirds,
@@ -75,3 +75,73 @@ router.get('/reports/batch-summary', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// 2. Branch-wise Performance Report
+router.get('/reports/branch-summary', async (req, res) => {
+    try {
+        const chicks = await ChicksEntry.find().populate('farmerId', 'name farmId branch');
+        const dailyLogs = await DailyEntry.find();
+        const feedRequests = await FeedRequest.find();
+        const sales = await SaleEntry.find();
+
+        let branchMap = {};
+
+        chicks.forEach(c => {
+            const branchName = c.branch || 'Main';
+            if (!branchMap[branchName]) {
+                branchMap[branchName] = {
+                    branch: branchName,
+                    totalBatches: 0,
+                    placedChicks: 0,
+                    totalMortality: 0,
+                    totalFeedIssued: 0,
+                    totalFeedConsumed: 0,
+                    totalSoldBirds: 0,
+                    totalSoldWeight: 0,
+                    totalRevenue: 0,
+                    liveBirdsCount: 0
+                };
+            }
+
+            const batchNo = c.batchNo;
+            const logs = dailyLogs.filter(d => d.batchNo === batchNo);
+            const batchFeeds = feedRequests.filter(f => f.batchNo === batchNo);
+            const batchSales = sales.filter(s => s.batchNo === batchNo);
+
+            const mortality = logs.reduce((sum, l) => sum + (l.mortality || 0), 0);
+            const feedIssued = batchFeeds.reduce((sum, f) => sum + (f.quantity || 0), 0);
+            const feedConsumed = logs.reduce((sum, l) => sum + (l.feedConsumedKg || 0), 0);
+            const soldBirds = batchSales.reduce((sum, s) => sum + (s.birdsCount || 0), 0);
+            const soldWeight = batchSales.reduce((sum, s) => sum + (s.totalWeightKg || 0), 0);
+            const revenue = batchSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+
+            branchMap[branchName].totalBatches += 1;
+            branchMap[branchName].placedChicks += c.quantity;
+            branchMap[branchName].totalMortality += mortality;
+            branchMap[branchName].totalFeedIssued += feedIssued;
+            branchMap[branchName].totalFeedConsumed += feedConsumed;
+            branchMap[branchName].totalSoldBirds += soldBirds;
+            branchMap[branchName].totalSoldWeight += soldWeight;
+            branchMap[branchName].totalRevenue += revenue;
+            branchMap[branchName].liveBirdsCount += (c.quantity - mortality - soldBirds);
+        });
+
+        let branchReport = Object.values(branchMap).map(b => {
+            let mortalityPercent = b.placedChicks > 0 ? ((b.totalMortality / b.placedChicks) * 100).toFixed(1) : '0.0';
+            let fcr = b.totalSoldWeight > 0 ? (b.totalFeedConsumed / b.totalSoldWeight).toFixed(2) : '0.00';
+            
+            return {
+                ...b,
+                mortalityPercent,
+                closingFeed: (b.totalFeedIssued - b.totalFeedConsumed) >= 0 ? (b.totalFeedIssued - b.totalFeedConsumed) : 0,
+                fcr
+            };
+        });
+
+        res.json(branchReport);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+module.exports = router;
