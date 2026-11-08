@@ -2,12 +2,11 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 
-// Get All Users Route (Supporting multiple paths and robust formatting)
-const sendUsersList = async (req, res) => {
+// Get All Users Route (Strictly from Database with normalized fields for dropdowns)
+router.get(['/', '/users', '/all', '/get-users'], async (req, res) => {
     try {
         const users = await User.find().lean();
         
-        // Map users to ensure both 'name' and 'username' are available for dropdowns
         const formattedUsers = users.map(u => ({
             _id: u._id,
             id: u._id,
@@ -22,9 +21,7 @@ const sendUsersList = async (req, res) => {
         console.error("Error fetching users:", err);
         res.status(500).json({ error: err.message });
     }
-};
-
-router.get(['/', '/users', '/all', '/get-users'], sendUsersList);
+});
 
 // Standard Login Route
 router.post('/login', async (req, res) => {
@@ -45,7 +42,7 @@ router.post('/login', async (req, res) => {
         }).lean();
 
         if (!dbUser) {
-            return res.status(401).json({ error: "User not found!" });
+            return res.status(401).json({ error: "User not found in database!" });
         }
 
         if (password && dbUser.password && password !== dbUser.password) {
