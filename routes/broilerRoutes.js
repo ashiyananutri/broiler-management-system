@@ -13,7 +13,7 @@ const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 
 // ==========================================
-// 1. MASTER CREATION ROUTES (Branches, Traders, Items, Users, Farmers)
+// 1. MASTER CREATION ROUTES
 // ==========================================
 
 // Branches
@@ -40,7 +40,7 @@ router.post('/items', async (req, res) => {
     try { const item = new Item(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Users
+// Users (Master Management)
 router.get('/users', async (req, res) => {
     try { res.json(await User.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -63,7 +63,7 @@ router.get('/farmers/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Flexible Farmer Active Batches Route (Fixes "Error loading batches!")
+// Flexible Farmer Active Batches Route
 router.get(['/farmer-batches/:farmerId', '/api/farmer-batches/:farmerId'], async (req, res) => {
     try {
         const { farmerId } = req.params;
@@ -85,10 +85,9 @@ router.get(['/farmer-batches/:farmerId', '/api/farmer-batches/:farmerId'], async
 
 
 // ==========================================
-// 2. ENTRY & TRANSACTION ROUTES (Chicks, Daily, Feed, Sale)
+// 2. ENTRY & TRANSACTION ROUTES
 // ==========================================
 
-// Batches / Chicks Entry
 router.get('/batches', async (req, res) => {
     try { res.json(await Batch.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -96,12 +95,10 @@ router.post('/batches', async (req, res) => {
     try { const item = new Batch(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Daily Logs Entry
 router.post('/dailylogs', async (req, res) => {
     try { const item = new DailyLog(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Transactions / Sales / Feed Entry
 router.get('/transactions', async (req, res) => {
     try { res.json(await Transaction.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
