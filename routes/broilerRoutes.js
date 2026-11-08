@@ -53,7 +53,7 @@ router.get('/farmer-batches/:farmerId', async (req, res) => {
 });
 
 
-// --- TRANSACTION GET & DELETE ROUTES ---
+// --- TRANSACTION ROUTES ---
 
 // 1. Chicks Entry
 router.get('/chicks-entry', async (req, res) => {
@@ -134,6 +134,76 @@ router.post('/sale-entry', async (req, res) => {
 router.delete('/sale-entry/:id', async (req, res) => {
     try { await SaleEntry.findByIdAndDelete(req.params.id); res.json({ message: 'Deleted' }); }
     catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
+// --- REPORTS API ---
+
+// 1. Batch-wise Summary Report (FCR, Mortality %, Total Feed, Sales)
+router.get('/reports/batch-summary', async (req, res) => {
+    try {
+        const chicks = await ChicksEntry.find().populate('farmerId', 'name farmId branch');
+        const dailyLogs = await DailyEntry.find();
+        const sales = await SaleEntry.find();
+
+        let report = chicks.map(c => {
+            const batchNo = c.batchNo;
+            const logs = dailyLogs.filter(d => d.batchNo === batchNo);
+            const batchSales = sales.filter(s => s.batchNo === batchNo);
+
+            const totalMortality = logs.reduce((sum, l) => sum + (l.mortality || 0), 0);
+            const totalFeedKg = logs.reduce((sum, l) => sum + (l.feedConsumedKg || 0), 0);
+            const totalSoldBirds = batchSales.reduce((sum, s) => sum + (s.birdsCount || 0), 0);
+            const totalSoldWeight = batchSales.reduce((sum, s) => sum + (s.totalWeightKg || 0), 0);
+            const totalRevenue = batchSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+
+            // Calculate FCR = Total Feed Consumed (Kg) / Total Weight Sold (Kg)
+            const fcr = totalSoldWeight > 0 ? (totalFeedKg / totalSoldWeight).toFixed(2) : '0.00';
+            const mortalityPercent = c.quantity > 0 ? ((totalMortality / c.quantity) * 100).toFixed(1) : '0.0';
+
+            return {
+                batchNo: c.batchNo,
+                farmerName: c.farmerId ? c.farmerId.name : 'N/A',
+                farmId: c.farmerId ? c.farmerId.farmId : 'N/A',
+                branch: c.branch,
+                placedChicks: c.quantity,
+                placementDate: c.date,
+                totalMortality,
+                mortalityPercent,
+                totalFeedKg,
+                totalSoldBirds,
+                totalSoldWeight,
+                totalRevenue,
+                fcr
+            };
+        });
+
+        res.json(report);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. Comprehensive Farmer Ledger
+router.get('/reports/farmer-ledger/:farmerId', async (req, res) => {
+    try {
+        const farmerId = req.params.farmerId;
+        const farmer = await Farmer.findById(farmerId);
+        const chicks = await ChicksEntry.find({ farmerId });
+        const feeds = await FeedRequest.find({ farmerId }).populate('itemId', 'name unit');
+        const dailyLogs = await DailyEntry.find({ farmerId });
+        const sales = await SaleEntry.find({ farmerId }).populate('traderId', 'name');
+
+        res.json({
+            farmer,
+            chicks,
+            feeds,
+            dailyLogs,
+            sales
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 module.exports = router;
