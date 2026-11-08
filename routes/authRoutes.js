@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 
-// Get All Users Route (Strictly from Database, no defaults)
-router.get(['/', '/users', '/all', '/get-users'], async (req, res) => {
+// Get All Users Route (Supporting multiple paths and robust formatting)
+const sendUsersList = async (req, res) => {
     try {
         const users = await User.find().lean();
         
-        // Formatting for dropdowns and admin tables
+        // Map users to ensure both 'name' and 'username' are available for dropdowns
         const formattedUsers = users.map(u => ({
             _id: u._id,
             id: u._id,
@@ -22,16 +22,18 @@ router.get(['/', '/users', '/all', '/get-users'], async (req, res) => {
         console.error("Error fetching users:", err);
         res.status(500).json({ error: err.message });
     }
-});
+};
 
-// Standard Login Route (Strict database check)
+router.get(['/', '/users', '/all', '/get-users'], sendUsersList);
+
+// Standard Login Route
 router.post('/login', async (req, res) => {
     try {
         const { email, username, password, user: legacyUser } = req.body;
         const identifier = email || username || legacyUser;
 
         if (!identifier) {
-            return res.status(400).json({ error: "Please provide email or username" });
+            return res.status(400).json({ error: "Please provide credentials" });
         }
 
         const dbUser = await User.findOne({
@@ -43,10 +45,9 @@ router.post('/login', async (req, res) => {
         }).lean();
 
         if (!dbUser) {
-            return res.status(401).json({ error: "User not found in database!" });
+            return res.status(401).json({ error: "User not found!" });
         }
 
-        // Optional password check if password field exists in your schema
         if (password && dbUser.password && password !== dbUser.password) {
             return res.status(401).json({ error: "Invalid password!" });
         }
@@ -68,7 +69,7 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// Register / Create User Route (Saves strictly to database)
+// Register / Create User Route
 router.post(['/', '/register', '/users'], async (req, res) => {
     try {
         const newUser = new User(req.body);
