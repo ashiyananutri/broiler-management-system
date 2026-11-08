@@ -447,20 +447,23 @@ async function openAddForm(type) {
     });
 }
 
-// 5. ENTRY SECTION VIEW & SUBMISSION
+// 5. ENTRY SECTION VIEW & SUBMISSION WITH LIST TABLE
 async function loadEntryView(type) {
     const content = document.getElementById('mainContent');
     const title = document.getElementById('pageTitle');
     const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const isAdmin = user.role === 'admin';
 
     title.textContent = `${type.toUpperCase()} Transaction`;
 
     let formTitle = `New ${type.toUpperCase()} Entry`;
     let formFields = '';
     let apiEndpoint = '';
+    let getEndpoint = '';
 
     if (type === 'chicks') {
         apiEndpoint = '/api/broiler/chicks-entry';
+        getEndpoint = '/api/broiler/chicks-entry';
         let farmerOpts = '<option value="">Select Farmer</option>';
         try {
             const res = await fetch('/api/broiler/farmers');
@@ -481,6 +484,7 @@ async function loadEntryView(type) {
     } 
     else if (type === 'feed') {
         apiEndpoint = '/api/broiler/feed-request';
+        getEndpoint = '/api/broiler/feed-request';
         let farmerOpts = '<option value="">Select Farmer</option>';
         let itemOpts = '<option value="">Select Feed Item</option>';
         try {
@@ -509,6 +513,7 @@ async function loadEntryView(type) {
     }
     else if (type === 'daily') {
         apiEndpoint = '/api/broiler/daily-entry';
+        getEndpoint = '/api/broiler/daily-entry';
         let farmerOpts = '<option value="">Select Farmer</option>';
         try {
             const res = await fetch('/api/broiler/farmers');
@@ -536,6 +541,7 @@ async function loadEntryView(type) {
     }
     else if (type === 'sale') {
         apiEndpoint = '/api/broiler/sale-entry';
+        getEndpoint = '/api/broiler/sale-entry';
         let farmerOpts = '<option value="">Select Farmer</option>';
         let traderOpts = '<option value="">Select Trader</option>';
         try {
@@ -564,17 +570,73 @@ async function loadEntryView(type) {
         `;
     }
 
+    // Fetch existing entries for Delete view
+    let existingEntries = [];
+    try {
+        const res = await fetch(getEndpoint);
+        existingEntries = await res.json();
+    } catch(e) {}
+
+    let rowsHtml = '';
+    existingEntries.forEach((item, index) => {
+        let farmerName = item.farmerId ? item.farmerId.name : 'N/A';
+        let detailText = '';
+
+        if (type === 'chicks') detailText = `Qty: ${item.quantity} | Hatchery: ${item.hatchery}`;
+        else if (type === 'feed') detailText = `Item: ${item.itemId?.name || 'Feed'} | Qty: ${item.quantity}`;
+        else if (type === 'daily') detailText = `Age: ${item.ageInDays} Days | Mort: ${item.mortality} | Feed: ${item.feedConsumedKg}kg`;
+        else if (type === 'sale') detailText = `Trader: ${item.traderId?.name || 'N/A'} | Qty: ${item.birdsCount} pcs (${item.totalWeightKg}kg) | Amount: ₹${item.totalAmount}`;
+
+        let entryDateFormatted = new Date(item.date || item.createdAt).toLocaleDateString('en-IN');
+
+        rowsHtml += `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="py-3 px-3 text-xs text-gray-700">${index + 1}</td>
+                <td class="py-3 px-3 text-xs font-semibold text-gray-900">${farmerName} <span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[11px] ml-1 font-mono">${item.batchNo || ''}</span></td>
+                <td class="py-3 px-3 text-xs text-gray-600">${detailText}</td>
+                <td class="py-3 px-3 text-xs text-gray-500">${entryDateFormatted}</td>
+                <td class="py-3 px-3 text-right">
+                    ${isAdmin ? `
+                        <button onclick="deleteTransaction('${type}', '${item._id}')" class="text-red-600 hover:text-red-800 text-xs font-semibold"><i class="fa-solid fa-trash"></i> Delete</button>
+                    ` : `<span class="text-xs text-gray-400 italic">Saved</span>`}
+                </td>
+            </tr>
+        `;
+    });
+
     content.innerHTML = `
-        <div class="max-w-2xl bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200 mx-auto">
-            <div class="flex justify-between items-center mb-6 pb-3 border-b">
-                <h3 class="text-base md:text-lg font-bold text-gray-800">${formTitle}</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Form Section -->
+            <div class="lg:col-span-5 bg-white p-6 rounded-xl shadow-sm border border-gray-200 h-fit">
+                <h3 class="text-base font-bold text-gray-800 mb-4 pb-2 border-b">${formTitle}</h3>
+                <form id="entryForm" class="space-y-4">
+                    ${formFields}
+                    <div class="pt-4">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg shadow transition text-sm">Submit Entry</button>
+                    </div>
+                </form>
             </div>
-            <form id="entryForm" class="space-y-4">
-                ${formFields}
-                <div class="pt-4 flex items-center justify-between">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg shadow transition text-sm">Submit Entry</button>
+
+            <!-- List Section for Deletion -->
+            <div class="lg:col-span-7 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <h3 class="text-base font-bold text-gray-800 mb-4 pb-2 border-b">Recent ${type.toUpperCase()} Records</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-600 text-[11px] uppercase font-semibold">
+                                <th class="py-2.5 px-3">#</th>
+                                <th class="py-2.5 px-3">Farmer / Batch</th>
+                                <th class="py-2.5 px-3">Details</th>
+                                <th class="py-2.5 px-3">Date</th>
+                                <th class="py-2.5 px-3 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml.length > 0 ? rowsHtml : `<tr><td colspan="5" class="text-center py-6 text-gray-400 text-xs">No entries found.</td></tr>`}
+                        </tbody>
+                    </table>
                 </div>
-            </form>
+            </div>
         </div>
     `;
 
@@ -628,17 +690,33 @@ async function loadEntryView(type) {
             const result = await res.json();
             if (res.ok) {
                 alert("✅ Entry saved successfully!");
-                document.getElementById('entryForm').reset();
+                loadEntryView(type);
             } else {
                 alert("❌ Error: " + (result.message || result.error));
             }
-        } catch (err) {
-            alert("Network error!");
-        }
+        } catch (err) { alert("Network error!"); }
     });
 }
 
-// 6. DELETE RECORD
+// DELETE TRANSACTION RECORD (Chicks, Feed, Daily, Sale)
+async function deleteTransaction(type, id) {
+    if (!confirm(`Kya aap is ${type.toUpperCase()} entry ko delete karna chahte hain?`)) return;
+
+    let endpoint = `/api/broiler/${type}-entry/${id}`;
+    if (type === 'feed') endpoint = `/api/broiler/feed-request/${id}`;
+
+    try {
+        const res = await fetch(endpoint, { method: 'DELETE' });
+        if (res.ok) {
+            alert("🗑️ Entry deleted successfully!");
+            loadEntryView(type);
+        } else {
+            alert("❌ Failed to delete entry!");
+        }
+    } catch(err) { alert("Server error!"); }
+}
+
+// 6. DELETE MASTER RECORD
 async function deleteRecord(type, id) {
     if (!confirm("Kya aap sach me is record ko delete karna chahte hain?")) return;
     let url = '';
@@ -814,9 +892,7 @@ async function openEditModal(type, id) {
             } catch(err) { alert("Server error!"); }
         });
 
-    } catch (err) {
-        alert("Error loading record for edit!");
-    }
+    } catch (err) { alert("Error loading record for edit!"); }
 }
 
 function logout() {
