@@ -42,7 +42,7 @@ router.get('/reports/batch-summary', async (req, res) => {
                 batchNo: c.batchNo,
                 farmerName: c.farmerId ? c.farmerId.name : 'N/A',
                 farmId: c.farmerId ? c.farmerId.farmId : 'N/A',
-                branch: c.branch,
+                branch: c.branch || (c.farmerId && c.farmerId.branch) || 'Main',
                 placedChicks: c.quantity,
                 liveBirds: liveBirds >= 0 ? liveBirds : 0,
                 totalMortality,
@@ -63,7 +63,7 @@ router.get('/reports/batch-summary', async (req, res) => {
     }
 });
 
-// 2. Branch-wise Performance Report
+// 2. Branch-wise Performance Report (With Robust Fallback)
 router.get('/reports/branch-summary', async (req, res) => {
     try {
         const chicks = await ChicksEntry.find().populate('farmerId', 'name farmId branch');
@@ -74,7 +74,9 @@ router.get('/reports/branch-summary', async (req, res) => {
         let branchMap = {};
 
         chicks.forEach(c => {
-            const branchName = c.branch || 'Main';
+            // Fallback to ensure branch is never blank/undefined
+            const branchName = c.branch || (c.farmerId && c.farmerId.branch) || 'Main';
+
             if (!branchMap[branchName]) {
                 branchMap[branchName] = {
                     branch: branchName,
