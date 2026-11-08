@@ -10,7 +10,7 @@ const Item = require('../models/Item');
 const LiftingLog = require('../models/LiftingLog');
 const Trader = require('../models/Trader');
 const Transaction = require('../models/Transaction');
-const User = require('../models/Users');
+const Users = require('../models/Users');
 
 // 1. Batch-wise Summary Report
 router.get('/reports/batch-summary', async (req, res) => {
