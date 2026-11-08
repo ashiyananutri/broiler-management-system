@@ -20,7 +20,7 @@ mongoose.connect(MONGO_URI)
 const authRoutes = require('./routes/authRoutes');
 const broilerRoutes = require('./routes/broilerRoutes');
 
-// Route Mounting (Supporting all path variations to prevent 404 / Network errors)
+// Route Mounting (Covering all URL variations so Network Error never occurs)
 app.use('/api/auth', authRoutes);
 app.use('/auth', authRoutes);
 app.use('/api/users', authRoutes);
