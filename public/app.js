@@ -806,23 +806,23 @@ async function loadReportView(reportType) {
             <div class="max-w-4xl bg-white p-6 rounded-xl shadow-sm border border-gray-200 mx-auto">
                 <div class="mb-6 pb-3 border-b no-print">
                     <h3 class="text-lg font-bold text-gray-800">Generate Farmer & Batch Ledger</h3>
-                    <p class="text-xs text-gray-500">Farmer select karein, phir batch chun kar poori report dekhein</p>
+                    <p class="text-xs text-gray-500">Farmer ya Batch change karte hi report automatically update ho jayegi</p>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 no-print">
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Select Farmer</label>
-                        <select id="reportFarmerId" onchange="fetchBatchesForLedger(this.value)" class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm font-medium">${farmerOpts}</select>
+                        <select id="reportFarmerId" onchange="onFarmerOrBatchChanged()" class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm font-medium">${farmerOpts}</select>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Select Batch</label>
-                        <select id="reportBatchNo" class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm font-medium">
+                        <select id="reportBatchNo" onchange="onFarmerOrBatchChanged()" class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm font-medium">
                             <option value="ALL">-- All Batches --</option>
                         </select>
                     </div>
                 </div>
                 <div class="text-right mb-4 no-print flex justify-end gap-3">
                     <button onclick="exportLedgerCSV()" class="bg-green-700 hover:bg-green-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition"><i class="fa-solid fa-file-excel mr-1"></i> Export to CSV</button>
-                    <button onclick="generateFarmerLedger()" class="bg-purple-700 hover:bg-purple-800 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition"><i class="fa-solid fa-file-invoice mr-1"></i> View Ledger Report</button>
+                    <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition"><i class="fa-solid fa-print mr-1"></i> Print Ledger</button>
                 </div>
                 <div id="farmerLedgerOutput"></div>
             </div>
@@ -830,18 +830,28 @@ async function loadReportView(reportType) {
     }
 }
 
-async function fetchBatchesForLedger(farmerId) {
+async function onFarmerOrBatchChanged() {
+    const farmerId = document.getElementById('reportFarmerId').value;
     const batchSelect = document.getElementById('reportBatchNo');
-    batchSelect.innerHTML = `<option value="ALL">-- All Batches --</option>`;
-    if (!farmerId) return;
 
-    try {
-        const res = await fetch(`/api/broiler/farmer-batches/${farmerId}`);
-        const batches = await res.json();
-        batches.forEach(b => {
-            batchSelect.innerHTML += `<option value="${b.batchNo}">Batch: ${b.batchNo} (Qty: ${b.quantity})</option>`;
-        });
-    } catch(e) {}
+    // Agar farmer change hua hai, toh pehle uske batches load karein
+    if (farmerId && event && event.target && event.target.id === 'reportFarmerId') {
+        batchSelect.innerHTML = `<option value="ALL">-- All Batches --</option>`;
+        try {
+            const res = await fetch(`/api/broiler/farmer-batches/${farmerId}`);
+            const batches = await res.json();
+            batches.forEach(b => {
+                batchSelect.innerHTML += `<option value="${b.batchNo}">Batch: ${b.batchNo} (Qty: ${b.quantity})</option>`;
+            });
+        } catch(e) {}
+    }
+
+    // Ab automatic ledger generate hoga
+    if (farmerId) {
+        generateFarmerLedger();
+    } else {
+        document.getElementById('farmerLedgerOutput').innerHTML = '';
+    }
 }
 
 let activeLedgerData = null; // Store for CSV export
@@ -851,14 +861,14 @@ async function generateFarmerLedger() {
     const batchNo = document.getElementById('reportBatchNo').value;
     const output = document.getElementById('farmerLedgerOutput');
     
-    if (!farmerId) return alert("⚠️ Kripya pehle Farmer select karein!");
+    if (!farmerId) return;
 
     output.innerHTML = `<div class="text-center py-6 text-gray-500">Loading ledger data...</div>`;
 
     try {
         const res = await fetch(`/api/broiler/reports/farmer-ledger/${farmerId}?batchNo=${batchNo}`);
         const data = await res.json();
-        activeLedgerData = data; // Save data
+        activeLedgerData = data; 
         const { farmer, chicks, feeds, dailyLogs, sales } = data;
 
         // Calculations for Daily Logs Summary
@@ -869,10 +879,9 @@ async function generateFarmerLedger() {
         let closingFeed = totalFeedIssued - totalFeedConsumed;
         let mortalityPercent = totalPlacedChicks > 0 ? ((totalMortality / totalPlacedChicks) * 100).toFixed(1) : '0.0';
 
-        // LATEST / MOST RECENT BODY WEIGHT (Aakhri entry ka body weight)
+        // LATEST BODY WEIGHT (Aakhri entry ka body weight)
         let latestBodyWeight = 0;
         if (dailyLogs.length > 0) {
-            // Sort by date or age in days descending to get the latest entry
             const sortedLogs = [...dailyLogs].sort((a, b) => (b.ageInDays || 0) - (a.ageInDays || 0));
             latestBodyWeight = sortedLogs[0].bodyWeightGm || 0;
         }
@@ -956,7 +965,7 @@ async function generateFarmerLedger() {
 // 7. EXPORT LEDGER TO CSV (EXCEL)
 function exportLedgerCSV() {
     if (!activeLedgerData || !activeLedgerData.farmer) {
-        return alert("⚠️ Kripya pehle Ledger Generate karein!");
+        return alert("⚠️ Kripya pehle Farmer select karke Ledger load karein!");
     }
 
     const { farmer, chicks, feeds, dailyLogs, sales } = activeLedgerData;
