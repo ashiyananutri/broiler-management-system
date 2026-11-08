@@ -209,7 +209,7 @@ function autoFillEditBranch(selectObj) {
     document.getElementById('editFarmerBranch').value = selectedOption.getAttribute('data-branch') || '';
 }
 
-// 3. MASTER LIST, CREATE, EDIT & DELETE VIEW
+// 3. MASTER LIST VIEW
 async function loadMasterView(type) {
     const content = document.getElementById('mainContent');
     const title = document.getElementById('pageTitle');
@@ -229,9 +229,7 @@ async function loadMasterView(type) {
     try {
         const res = await fetch(apiGet);
         records = await res.json();
-    } catch (err) {
-        console.error("Error fetching data");
-    }
+    } catch (err) {}
 
     let rowsHtml = '';
     records.forEach((item, index) => {
@@ -392,7 +390,7 @@ async function openAddForm(type) {
     });
 }
 
-// 5. ENTRY SECTION VIEW & SUBMISSION FORMS
+// 5. ENTRY SECTION VIEW & SUBMISSION (With Auto Batch No & Optional Date)
 async function loadEntryView(type) {
     const content = document.getElementById('mainContent');
     const title = document.getElementById('pageTitle');
@@ -415,7 +413,8 @@ async function loadEntryView(type) {
 
         formFields = `
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer</label><select id="chicksFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Batch / Lot No</label><input type="text" id="batchNo" required class="w-full px-4 py-2.5 border rounded-lg text-sm" placeholder="LOT-001"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Batch / Lot No (Auto Generated)</label><input type="text" id="batchNo" readonly placeholder="Auto Generated" class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Entry Date (Optional - Today if blank)</label><input type="date" id="chicksDate" class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Chicks Quantity</label><input type="number" id="chicksQty" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Hatchery Name</label><input type="text" id="hatcheryName" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
         `;
@@ -438,7 +437,7 @@ async function loadEntryView(type) {
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer</label><select id="feedFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Feed Item</label><select id="feedItem" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${itemOpts}</select></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Quantity (Bags / Kg)</label><input type="number" id="feedQty" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
-            <p class="text-xs text-blue-600 bg-blue-50 p-3 rounded-lg"><i class="fa-solid fa-circle-info"></i> Note: Yeh entry bhejte hi is farmer ke assigned Supervisor ke paas approval ke liye notification jayegi.</p>
+            <p class="text-xs text-blue-600 bg-blue-50 p-3 rounded-lg"><i class="fa-solid fa-circle-info"></i> Note: Supervisor approval ke baad hi farmer book me update hoga.</p>
         `;
     }
     else if (type === 'daily') {
@@ -501,9 +500,10 @@ async function loadEntryView(type) {
 
         if (type === 'chicks') {
             payload.farmerId = document.getElementById('chicksFarmer').value;
-            payload.batchNo = document.getElementById('batchNo').value;
             payload.quantity = Number(document.getElementById('chicksQty').value);
             payload.hatchery = document.getElementById('hatcheryName').value;
+            const dateVal = document.getElementById('chicksDate').value;
+            if (dateVal) payload.date = dateVal;
         } else if (type === 'feed') {
             payload.farmerId = document.getElementById('feedFarmer').value;
             payload.itemId = document.getElementById('feedItem').value;
