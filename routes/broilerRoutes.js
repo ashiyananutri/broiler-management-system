@@ -8,7 +8,7 @@ const Farmer = require('../models/Farmer');
 const Item = require('../models/Item');
 const Trader = require('../models/Trader');
 const Transaction = require('../models/Transaction');
-const User = require('../models/User');
+const User = require('../models/User'); // Model name is User
 
 // ==========================================
 // MASTER CREATION ROUTES
@@ -35,8 +35,8 @@ router.post('/items', async (req, res) => {
     try { const item = new Item(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Normalized Users/Supervisors Route for Form Dropdowns
-router.get(['/users', '/api/users', '/auth/users'], async (req, res) => {
+// Users & Supervisors Route using User model for Dropdowns
+router.get(['/users', '/api/users', '/supervisors', '/api/supervisors'], async (req, res) => {
     try { 
         const users = await User.find().lean();
         const formattedUsers = users.map(u => ({
@@ -52,6 +52,7 @@ router.get(['/users', '/api/users', '/auth/users'], async (req, res) => {
         res.status(500).json({ error: err.message }); 
     }
 });
+
 router.post(['/users', '/api/users'], async (req, res) => {
     try { 
         const item = new User(req.body); 
