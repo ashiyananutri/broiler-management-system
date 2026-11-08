@@ -53,7 +53,7 @@ router.get('/farmer-batches/:farmerId', async (req, res) => {
 });
 
 
-// --- TRANSACTION ROUTES ---
+// --- TRANSACTION GET, POST & DELETE ROUTES ---
 
 // 1. Chicks Entry
 router.get('/chicks-entry', async (req, res) => {
@@ -198,15 +198,23 @@ router.get('/reports/batch-summary', async (req, res) => {
     }
 });
 
-// 2. Comprehensive Farmer Ledger
+// 2. Comprehensive Farmer Ledger with Batch Filter
 router.get('/reports/farmer-ledger/:farmerId', async (req, res) => {
     try {
         const farmerId = req.params.farmerId;
+        const batchNo = req.query.batchNo;
+
         const farmer = await Farmer.findById(farmerId);
-        const chicks = await ChicksEntry.find({ farmerId });
-        const feeds = await FeedRequest.find({ farmerId }).populate('itemId', 'name unit');
-        const dailyLogs = await DailyEntry.find({ farmerId });
-        const sales = await SaleEntry.find({ farmerId }).populate('traderId', 'name');
+        
+        let queryFilter = { farmerId };
+        if (batchNo && batchNo !== 'ALL') {
+            queryFilter.batchNo = batchNo;
+        }
+
+        const chicks = await ChicksEntry.find(queryFilter);
+        const feeds = await FeedRequest.find(queryFilter).populate('itemId', 'name unit');
+        const dailyLogs = await DailyEntry.find(queryFilter);
+        const sales = await SaleEntry.find(queryFilter).populate('traderId', 'name');
 
         res.json({
             farmer,
