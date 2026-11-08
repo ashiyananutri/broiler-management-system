@@ -19,7 +19,7 @@ const feedRequestSchema = new mongoose.Schema({
     quantity: { type: Number, required: true },
     sentBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     supervisorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    status: { type: String, enum: ['Pending', 'Accepted', 'Rejected'], default: 'Pending' },
+    status: { type: String, enum: ['Pending', 'Accepted', 'Rejected'], default: 'Accepted' },
     date: { type: Date, default: Date.now }
 }, { timestamps: true });
 
