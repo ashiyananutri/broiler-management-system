@@ -1,6 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const { ChicksEntry, FeedRequest, DailyEntry, SaleEntry, Branch, Farmer, Trader, Item } = require('../models/BroilerModels');
+
+// ---------------------------------------------------------
+// ⚠️ APNE MODELS KE HISAAB SE INME SE EK REQUIRE RAKHEIN:
+// ---------------------------------------------------------
+// OPTION A: Agar saare models ek hi file me hain (jaise model.js ya broiler.js)
+const { ChicksEntry, FeedRequest, DailyEntry, SaleEntry, Branch, Farmer, Trader, Item } = require('../models/model'); 
+
+// OPTION B: Agar models alag-alag files me hain (uncomment if needed):
+/*
+const ChicksEntry = require('../models/ChicksEntry');
+const FeedRequest = require('../models/FeedRequest');
+const DailyEntry = require('../models/DailyEntry');
+const SaleEntry = require('../models/SaleEntry');
+const Branch = require('../models/Branch');
+const Farmer = require('../models/Farmer');
+const Trader = require('../models/Trader');
+const Item = require('../models/Item');
+*/
 
 // 1. Batch-wise Summary Report
 router.get('/reports/batch-summary', async (req, res) => {
