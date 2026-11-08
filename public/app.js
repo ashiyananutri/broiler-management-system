@@ -158,6 +158,7 @@ function renderDashboard() {
                         </button>
                         <div id="reportSubmenu" class="pl-4 mt-1 space-y-1 hidden">
                             <a href="#" onclick="loadReportView('batch'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-list-check text-xs"></i><span>Batch Summary Report</span></a>
+                            <a href="#" onclick="loadReportView('branch-summary'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-code-branch text-xs"></i><span>Branch Summary Report</span></a>
                             <a href="#" onclick="loadReportView('farmer'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-book text-xs"></i><span>Farmer Ledger</span></a>
                         </div>
                     </div>
@@ -775,7 +776,7 @@ async function loadReportView(reportType) {
                                     <th class="py-3 px-3">Placed</th>
                                     <th class="py-3 px-3">Mortality</th>
                                     <th class="py-3 px-3">Live Birds</th>
-                                    <th class="py-3 px-3">Feed Issued</th>
+                                    <th class="py-3 px-3">Feed Consumed</th>
                                     <th class="py-3 px-3">Closing Feed</th>
                                     <th class="py-3 px-3">Total Sale</th>
                                     <th class="py-3 px-3">FCR</th>
@@ -793,6 +794,70 @@ async function loadReportView(reportType) {
             content.innerHTML = `<div class="text-red-500 font-semibold p-4">Failed to load batch report!</div>`;
         }
     } 
+    else if (reportType === 'branch-summary') {
+        title.textContent = 'Branch-wise Performance Report';
+        content.innerHTML = `<div class="text-center py-10 font-semibold text-gray-500">Loading Branch Summary...</div>`;
+
+        try {
+            const res = await fetch('/api/broiler/reports/branch-summary');
+            const data = await res.json();
+
+            let rows = '';
+            data.forEach((b, i) => {
+                rows += `
+                    <tr class="border-b hover:bg-gray-50 text-xs md:text-sm">
+                        <td class="py-3 px-3">${i + 1}</td>
+                        <td class="py-3 px-3 font-bold text-gray-900">${b.branch}</td>
+                        <td class="py-3 px-3 font-semibold text-blue-700">${b.totalBatches}</td>
+                        <td class="py-3 px-3">${b.placedChicks}</td>
+                        <td class="py-3 px-3 text-red-600 font-semibold">${b.totalMortality} (${b.mortalityPercent}%)</td>
+                        <td class="py-3 px-3 text-green-700 font-bold">${b.liveBirdsCount} Pcs</td>
+                        <td class="py-3 px-3 text-blue-700">${b.totalFeedConsumed} Kg</td>
+                        <td class="py-3 px-3 text-purple-700">${b.closingFeed} Kg</td>
+                        <td class="py-3 px-3">${b.totalSoldWeight} Kg</td>
+                        <td class="py-3 px-3 font-bold text-gray-800">${b.fcr}</td>
+                        <td class="py-3 px-3 font-bold text-green-800">₹${b.totalRevenue.toLocaleString('en-IN')}</td>
+                    </tr>
+                `;
+            });
+
+            content.innerHTML = `
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-3 border-b gap-3">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800">Branch-wise Performance Status</h3>
+                            <p class="text-xs text-gray-500">Sabhi branches ka total chicks placement, mortality, feed stock aur revenue overview</p>
+                        </div>
+                        <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition"><i class="fa-solid fa-print mr-1"></i> Print Report</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[800px]">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 text-xs uppercase font-semibold">
+                                    <th class="py-3 px-3">#</th>
+                                    <th class="py-3 px-3">Branch Name</th>
+                                    <th class="py-3 px-3">Active Batches</th>
+                                    <th class="py-3 px-3">Placed Chicks</th>
+                                    <th class="py-3 px-3">Total Mortality</th>
+                                    <th class="py-3 px-3">Live Birds</th>
+                                    <th class="py-3 px-3">Feed Consumed</th>
+                                    <th class="py-3 px-3">Closing Feed</th>
+                                    <th class="py-3 px-3">Total Sale</th>
+                                    <th class="py-3 px-3">FCR</th>
+                                    <th class="py-3 px-3">Total Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows.length > 0 ? rows : `<tr><td colspan="11" class="text-center py-6 text-gray-400">No branch records found.</td></tr>`}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        } catch(e) {
+            content.innerHTML = `<div class="text-red-500 font-semibold p-4">Failed to load branch report!</div>`;
+        }
+    }
     else if (reportType === 'farmer') {
         title.textContent = 'Farmer Ledger Report';
         let farmerOpts = '<option value="">Select Farmer</option>';
@@ -834,7 +899,6 @@ async function onFarmerOrBatchChanged() {
     const farmerId = document.getElementById('reportFarmerId').value;
     const batchSelect = document.getElementById('reportBatchNo');
 
-    // Agar farmer change hua hai, toh pehle uske batches load karein
     if (farmerId && event && event.target && event.target.id === 'reportFarmerId') {
         batchSelect.innerHTML = `<option value="ALL">-- All Batches --</option>`;
         try {
@@ -846,7 +910,6 @@ async function onFarmerOrBatchChanged() {
         } catch(e) {}
     }
 
-    // Ab automatic ledger generate hoga
     if (farmerId) {
         generateFarmerLedger();
     } else {
@@ -854,7 +917,7 @@ async function onFarmerOrBatchChanged() {
     }
 }
 
-let activeLedgerData = null; // Store for CSV export
+let activeLedgerData = null;
 
 async function generateFarmerLedger() {
     const farmerId = document.getElementById('reportFarmerId').value;
@@ -871,7 +934,6 @@ async function generateFarmerLedger() {
         activeLedgerData = data; 
         const { farmer, chicks, feeds, dailyLogs, sales } = data;
 
-        // Calculations for Daily Logs Summary
         let totalPlacedChicks = chicks.reduce((sum, c) => sum + c.quantity, 0);
         let totalFeedIssued = feeds.reduce((sum, f) => sum + f.quantity, 0);
         let totalMortality = dailyLogs.reduce((sum, d) => sum + (d.mortality || 0), 0);
@@ -879,7 +941,6 @@ async function generateFarmerLedger() {
         let closingFeed = totalFeedIssued - totalFeedConsumed;
         let mortalityPercent = totalPlacedChicks > 0 ? ((totalMortality / totalPlacedChicks) * 100).toFixed(1) : '0.0';
 
-        // LATEST BODY WEIGHT (Aakhri entry ka body weight)
         let latestBodyWeight = 0;
         if (dailyLogs.length > 0) {
             const sortedLogs = [...dailyLogs].sort((a, b) => (b.ageInDays || 0) - (a.ageInDays || 0));
@@ -889,9 +950,9 @@ async function generateFarmerLedger() {
         let liveBirds = totalPlacedChicks - totalMortality;
         let totalBodyWeightKg = ((liveBirds * latestBodyWeight) / 1000).toFixed(2);
 
-        // Total Sold Weight from Sales
         let totalSoldWeight = sales.reduce((sum, s) => sum + (s.totalWeightKg || 0), 0);
-        let fcr = totalSoldWeight > 0 ? (totalFeedConsumed / totalSoldWeight).toFixed(2) : (totalBodyWeightKg > 0 ? (totalFeedConsumed / totalBodyWeightKg).toFixed(2) : '0.00');
+        let totalEffectiveWeight = Number(totalSoldWeight) + Number(totalBodyWeightKg);
+        let fcr = totalEffectiveWeight > 0 ? (totalFeedConsumed / totalEffectiveWeight).toFixed(2) : '0.00';
 
         let chicksRows = chicks.map(c => `<tr><td class="p-2 border font-semibold">${c.batchNo}</td><td class="p-2 border">${c.quantity} Pcs</td><td class="p-2 border">${c.hatchery}</td><td class="p-2 border">${new Date(c.date).toLocaleDateString('en-IN')}</td></tr>`).join('');
         
