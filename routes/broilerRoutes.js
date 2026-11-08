@@ -13,7 +13,7 @@ const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 
 // ==========================================
-// 1. FARMER ROUTES (Network Error Fix)
+// 1. FARMER ROUTES (Fixes Network Error)
 // ==========================================
 
 // Get All Farmers
@@ -47,6 +47,21 @@ router.get('/farmers/:id', async (req, res) => {
         res.json(farmer);
     } catch (err) {
         console.error("Error fetching farmer by ID:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Farmer Active Batches Route (Fixes "Error loading batches!")
+router.get('/farmer-batches/:farmerId', async (req, res) => {
+    try {
+        const { farmerId } = req.params;
+        const chicks = await Batch.find({ 
+            $or: [{ farmerId }, { farmer }, { farmer_id: farmerId }] 
+        }).lean();
+        
+        res.json(chicks);
+    } catch (err) {
+        console.error("Error loading batches for farmer:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -233,17 +248,6 @@ router.get('/reports/farmer-ledger/:farmerId', async (req, res) => {
         const sales = await Transaction.find(queryFilter).populate('traderId', 'name marketArea');
 
         res.json({ farmer, chicks, feeds, dailyLogs, sales });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Farmer Active Batches Route
-router.get('/farmer-batches/:farmerId', async (req, res) => {
-    try {
-        const { farmerId } = req.params;
-        const chicks = await Batch.find({ $or: [{ farmerId }, { farmer }, { farmer_id: farmerId }] });
-        res.json(chicks);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
