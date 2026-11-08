@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-// 1. Chicks Entry Schema
+// 1. Chicks Entry Schema (Auto Batch & Optional Date)
 const chicksEntrySchema = new mongoose.Schema({
     branch: { type: String, required: true },
     farmerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Farmer', required: true },
