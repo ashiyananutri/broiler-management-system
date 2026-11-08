@@ -20,20 +20,18 @@ mongoose.connect(MONGO_URI)
 const authRoutes = require('./routes/authRoutes');
 const broilerRoutes = require('./routes/broilerRoutes');
 
-// API Route Mounting (Supporting all path variations)
+// Route Mounting (Supporting all path variations including /api/broiler to fix 404)
 app.use('/api/auth', authRoutes);
 app.use('/auth', authRoutes);
 app.use('/api/users', authRoutes);
 app.use('/users', authRoutes);
 
+app.use('/api/broiler', broilerRoutes); // Fixes 404 error for frontend requests
 app.use('/api', broilerRoutes);
 app.use('/', broilerRoutes);
 
-// ==========================================
-// FRONTEND STATIC SERVING (Fixes the root text message issue)
-// ==========================================
-// Yeh aapke frontend files ko serve karega ('public' folder ya 'dist' folder se)
-const frontendPath = path.join(__dirname, 'public'); // Agar aapka folder 'dist' ya kuch aur hai toh yahan change kar sakte hain
+// Frontend Static Serving
+const frontendPath = path.join(__dirname, 'public');
 app.use(express.static(frontendPath));
 
 // Fallback Route for Single Page Applications (SPA)
@@ -42,7 +40,7 @@ app.get('*', (req, res) => {
     if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
     } else {
-        res.status(404).send('Frontend index.html not found in public folder!');
+        res.send('Broiler Management System Backend is Running Successfully!');
     }
 });
 
