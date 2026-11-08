@@ -6,7 +6,8 @@ const chicksEntrySchema = new mongoose.Schema({
     farmerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Farmer', required: true },
     batchNo: { type: String, required: true },
     quantity: { type: Number, required: true },
-    hatchery: { type: String, required: true }
+    hatchery: { type: String, required: true },
+    date: { type: Date, default: Date.now }
 }, { timestamps: true });
 
 // 2. Feed Transfer Request Schema (Godown -> Supervisor Approval -> Farmer Book)
