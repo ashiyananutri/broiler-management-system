@@ -10,11 +10,11 @@ const chicksEntrySchema = new mongoose.Schema({
     date: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// 2. Feed Transfer Request Schema (Batch Added)
+// 2. Feed Transfer Request Schema
 const feedRequestSchema = new mongoose.Schema({
     branch: { type: String, required: true },
     farmerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Farmer', required: true },
-    batchNo: { type: String, required: true }, // Added batch link
+    batchNo: { type: String, required: true },
     itemId: { type: mongoose.Schema.Types.ObjectId, ref: 'Item', required: true },
     quantity: { type: Number, required: true },
     sentBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -23,11 +23,11 @@ const feedRequestSchema = new mongoose.Schema({
     date: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// 3. Daily Batch Entry Schema (Batch Added)
+// 3. Daily Batch Entry Schema
 const dailyEntrySchema = new mongoose.Schema({
     branch: { type: String, required: true },
     farmerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Farmer', required: true },
-    batchNo: { type: String, required: true }, // Added batch link
+    batchNo: { type: String, required: true },
     ageInDays: { type: Number, required: true },
     mortality: { type: Number, default: 0 },
     feedConsumedKg: { type: Number, default: 0 },
@@ -36,11 +36,11 @@ const dailyEntrySchema = new mongoose.Schema({
     date: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// 4. Sale Entry Schema (Batch Added)
+// 4. Sale Entry Schema
 const saleEntrySchema = new mongoose.Schema({
     branch: { type: String, required: true },
     farmerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Farmer', required: true },
-    batchNo: { type: String, required: true }, // Added batch link
+    batchNo: { type: String, required: true },
     traderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Trader', required: true },
     birdsCount: { type: Number, required: true },
     totalWeightKg: { type: Number, required: true },
