@@ -44,7 +44,7 @@ router.delete('/items/:id', async (req, res) => { await Item.findByIdAndDelete(r
 
 // --- TRANSACTION / ENTRY ROUTES ---
 
-// 1. Chicks Entry (Auto Batch No & Default Today Date)
+// 1. Chicks Entry (Auto Batch No Generation & Optional Date)
 router.post('/chicks-entry', async (req, res) => {
     try {
         const count = await ChicksEntry.countDocuments();
