@@ -6,7 +6,7 @@ const Trader = require('../models/Trader');
 const Item = require('../models/Item');
 const { ChicksEntry, FeedRequest, DailyEntry, SaleEntry } = require('../models/Transaction');
 
-// --- EXISTING MASTER ROUTES ---
+// --- MASTER ROUTES ---
 router.get('/branches', async (req, res) => res.json(await Branch.find()));
 router.post('/branches', async (req, res) => {
     try { const b = new Branch(req.body); await b.save(); res.status(201).json(b); } catch(e){ res.status(500).json({error: e.message}); }
@@ -42,12 +42,20 @@ router.put('/items/:id', async (req, res) => res.json(await Item.findByIdAndUpda
 router.delete('/items/:id', async (req, res) => { await Item.findByIdAndDelete(req.params.id); res.json({message: "Deleted"}); });
 
 
-// --- NEW TRANSACTION / ENTRY ROUTES ---
+// --- TRANSACTION / ENTRY ROUTES ---
 
-// 1. Chicks Entry
+// 1. Chicks Entry (Auto Batch No & Default Today Date)
 router.post('/chicks-entry', async (req, res) => {
     try {
-        const entry = new ChicksEntry(req.body);
+        const count = await ChicksEntry.countDocuments();
+        const batchNo = `BATCH-${String(count + 1).padStart(3, '0')}`;
+        
+        let entryData = { ...req.body, batchNo };
+        if (!entryData.date) {
+            entryData.date = new Date();
+        }
+
+        const entry = new ChicksEntry(entryData);
         await entry.save();
         res.status(201).json({ message: 'Chicks entry saved successfully!', entry });
     } catch (err) {
@@ -55,7 +63,7 @@ router.post('/chicks-entry', async (req, res) => {
     }
 });
 
-// 2. Feed Out (Godown to Farmer Request)
+// 2. Feed Out Request
 router.post('/feed-request', async (req, res) => {
     try {
         const { branch, farmerId, itemId, quantity, sentBy } = req.body;
@@ -65,11 +73,7 @@ router.post('/feed-request', async (req, res) => {
         }
 
         const feedReq = new FeedRequest({
-            branch,
-            farmerId,
-            itemId,
-            quantity,
-            sentBy,
+            branch, farmerId, itemId, quantity, sentBy,
             supervisorId: farmer.supervisorId,
             status: 'Pending'
         });
