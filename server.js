@@ -1,26 +1,39 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-require('dotenv').config();
 
 const app = express();
+
+// Middleware
 app.use(express.json());
 app.use(cors());
 
-// Serve static frontend files
-app.use(express.static('public'));
+// MongoDB Connection
+const MONGO_URI = process.env.MONGO_URI || 'YOUR_MONGODB_CONNECTION_STRING_HERE';
+mongoose.connect(MONGO_URI)
+    .then(() => console.log("MongoDB Connected Successfully"))
+    .catch(err => console.error("MongoDB Connection Error:", err));
 
-// Database Connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/broiler-db')
-    .then(() => console.log('MongoDB Connected Successfully'))
-    .catch(err => console.log('DB Connection Error:', err));
-
-// Import Routes
+// Routes Import
 const authRoutes = require('./routes/authRoutes');
 const broilerRoutes = require('./routes/broilerRoutes');
 
+// Route Mounting (Supporting all path variations to prevent 404 / Network errors)
 app.use('/api/auth', authRoutes);
-app.use('/api/broiler', broilerRoutes);
+app.use('/auth', authRoutes);
+app.use('/api/users', authRoutes);
+app.use('/users', authRoutes);
 
+app.use('/api', broilerRoutes);
+app.use('/', broilerRoutes);
+
+// Root Route
+app.get('/', (req, res) => {
+    res.send('Broiler Management System Backend is Running Successfully!');
+});
+
+// Server Listening
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
