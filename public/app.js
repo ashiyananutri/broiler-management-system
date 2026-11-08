@@ -72,7 +72,7 @@ function renderLogin() {
     });
 }
 
-// 2. RENDER PROFESSIONAL DASHBOARD (Responsive Mobile Support)
+// 2. RENDER PROFESSIONAL DASHBOARD
 function renderDashboard() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -102,10 +102,9 @@ function renderDashboard() {
                         <span>Dashboard</span>
                     </a>
 
-                    <!-- Master Creation Dropdown Menu -->
+                    <!-- Master Creation Menu -->
                     <div class="pt-2">
                         <p class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Master Management</p>
-                        
                         <button onclick="toggleMasterMenu()" class="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 font-medium text-sm transition">
                             <div class="flex items-center space-x-3">
                                 <i class="fa-solid fa-folder-tree w-5 text-green-500"></i>
@@ -113,7 +112,6 @@ function renderDashboard() {
                             </div>
                             <i class="fa-solid fa-chevron-down text-xs" id="masterChevron"></i>
                         </button>
-
                         <div id="masterSubmenu" class="pl-4 mt-1 space-y-1 hidden">
                             <a href="#" onclick="loadMasterView('branch'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-code-branch text-xs"></i><span>Branches</span></a>
                             <a href="#" onclick="loadMasterView('user'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-user-plus text-xs"></i><span>Users</span></a>
@@ -123,10 +121,9 @@ function renderDashboard() {
                         </div>
                     </div>
 
-                    <!-- Entry Section Dropdown Menu -->
+                    <!-- Entry Section Menu -->
                     <div class="pt-2">
                         <p class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Entry Section</p>
-                        
                         <button onclick="toggleEntryMenu()" class="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 font-medium text-sm transition">
                             <div class="flex items-center space-x-3">
                                 <i class="fa-solid fa-pen-to-square w-5 text-blue-500"></i>
@@ -134,7 +131,6 @@ function renderDashboard() {
                             </div>
                             <i class="fa-solid fa-chevron-down text-xs" id="entryChevron"></i>
                         </button>
-
                         <div id="entrySubmenu" class="pl-4 mt-1 space-y-1 hidden">
                             <a href="#" onclick="loadEntryView('chicks'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-kiwi-bird text-xs"></i><span>Chicks Entry</span></a>
                             <a href="#" onclick="loadEntryView('feed'); toggleMobileSidebar();" class="flex items-center space-x-3 px-4 py-2.5 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white text-sm"><i class="fa-solid fa-boxes-packing text-xs"></i><span>Feed Out (Godown)</span></a>
@@ -390,7 +386,7 @@ async function openAddForm(type) {
     });
 }
 
-// 5. ENTRY SECTION VIEW & SUBMISSION (With Auto Batch No & Optional Date)
+// 5. ENTRY SECTION VIEW & SUBMISSION (With Dates)
 async function loadEntryView(type) {
     const content = document.getElementById('mainContent');
     const title = document.getElementById('pageTitle');
@@ -414,7 +410,7 @@ async function loadEntryView(type) {
         formFields = `
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer</label><select id="chicksFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Batch / Lot No (Auto Generated)</label><input type="text" id="batchNo" readonly placeholder="Auto Generated" class="w-full px-4 py-2.5 border rounded-lg bg-gray-100 text-sm"></div>
-            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Entry Date (Optional - Today if blank)</label><input type="date" id="chicksDate" class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Entry Date (Optional - Today if blank)</label><input type="date" id="entryDate" class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Chicks Quantity</label><input type="number" id="chicksQty" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Hatchery Name</label><input type="text" id="hatcheryName" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
         `;
@@ -436,6 +432,7 @@ async function loadEntryView(type) {
         formFields = `
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer</label><select id="feedFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Feed Item</label><select id="feedItem" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${itemOpts}</select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Entry Date (Optional - Today if blank)</label><input type="date" id="entryDate" class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Quantity (Bags / Kg)</label><input type="number" id="feedQty" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <p class="text-xs text-blue-600 bg-blue-50 p-3 rounded-lg"><i class="fa-solid fa-circle-info"></i> Note: Supervisor approval ke baad hi farmer book me update hoga.</p>
         `;
@@ -451,6 +448,7 @@ async function loadEntryView(type) {
 
         formFields = `
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer</label><select id="dailyFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Entry Date (Optional - Today if blank)</label><input type="date" id="entryDate" class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Age in Days</label><input type="number" id="ageDays" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Mortality (Dead Birds)</label><input type="number" id="mortality" value="0" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Feed Consumed (Kg)</label><input type="number" id="feedConsumed" value="0" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
@@ -474,6 +472,7 @@ async function loadEntryView(type) {
         formFields = `
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Farmer (Source)</label><select id="saleFarmer" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${farmerOpts}</select></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Select Trader (Buyer)</label><select id="saleTrader" required class="w-full px-4 py-2.5 border rounded-lg bg-white text-sm">${traderOpts}</select></div>
+            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Sale Date (Optional - Today if blank)</label><input type="date" id="entryDate" class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Birds Count (Pcs)</label><input type="number" id="birdsCount" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Total Weight (Kg)</label><input type="number" step="0.01" id="totalWeight" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
             <div><label class="block text-sm font-semibold text-gray-700 mb-1">Rate Per Kg (₹)</label><input type="number" step="0.01" id="ratePerKg" required class="w-full px-4 py-2.5 border rounded-lg text-sm"></div>
@@ -498,12 +497,13 @@ async function loadEntryView(type) {
         e.preventDefault();
         let payload = { branch: user.branch || 'Main' };
 
+        const customDate = document.getElementById('entryDate').value;
+        if (customDate) payload.date = customDate;
+
         if (type === 'chicks') {
             payload.farmerId = document.getElementById('chicksFarmer').value;
             payload.quantity = Number(document.getElementById('chicksQty').value);
             payload.hatchery = document.getElementById('hatcheryName').value;
-            const dateVal = document.getElementById('chicksDate').value;
-            if (dateVal) payload.date = dateVal;
         } else if (type === 'feed') {
             payload.farmerId = document.getElementById('feedFarmer').value;
             payload.itemId = document.getElementById('feedItem').value;
@@ -565,7 +565,7 @@ async function deleteRecord(type, id) {
     } catch(err) { alert("Server error!"); }
 }
 
-// 7. OPEN EDIT FORM
+// 7. OPEN EDIT FORM FOR MASTERS
 async function openEditModal(type, id) {
     let apiGet = '';
     if (type === 'branch') apiGet = `/api/broiler/branches`;
