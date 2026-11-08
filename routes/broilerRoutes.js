@@ -35,8 +35,22 @@ router.post('/items', async (req, res) => {
     try { const item = new Item(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.get('/users', async (req, res) => {
-    try { res.json(await User.find().lean()); } catch (err) { res.status(500).json({ error: err.message }); }
+// Normalized Users Route for Dropdowns
+router.get(['/users', '/api/users'], async (req, res) => {
+    try { 
+        const users = await User.find().lean();
+        const formattedUsers = users.map(u => ({
+            _id: u._id,
+            id: u._id,
+            name: u.name || u.username || 'User',
+            username: u.username || u.name || '',
+            role: u.role || 'user',
+            branch: u.branch || 'Main'
+        }));
+        res.json(formattedUsers); 
+    } catch (err) { 
+        res.status(500).json({ error: err.message }); 
+    }
 });
 router.post('/users', async (req, res) => {
     try { const item = new User(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
