@@ -869,11 +869,16 @@ async function generateFarmerLedger() {
         let closingFeed = totalFeedIssued - totalFeedConsumed;
         let mortalityPercent = totalPlacedChicks > 0 ? ((totalMortality / totalPlacedChicks) * 100).toFixed(1) : '0.0';
 
-        // Avg Body Weight (average of recorded body weights)
-        let avgBodyWeight = dailyLogs.length > 0 ? (dailyLogs.reduce((sum, d) => sum + (d.bodyWeightGm || 0), 0) / dailyLogs.length).toFixed(1) : 0;
+        // LATEST / MOST RECENT BODY WEIGHT (Aakhri entry ka body weight)
+        let latestBodyWeight = 0;
+        if (dailyLogs.length > 0) {
+            // Sort by date or age in days descending to get the latest entry
+            const sortedLogs = [...dailyLogs].sort((a, b) => (b.ageInDays || 0) - (a.ageInDays || 0));
+            latestBodyWeight = sortedLogs[0].bodyWeightGm || 0;
+        }
         
         let liveBirds = totalPlacedChicks - totalMortality;
-        let totalBodyWeightKg = ((liveBirds * avgBodyWeight) / 1000).toFixed(2);
+        let totalBodyWeightKg = ((liveBirds * latestBodyWeight) / 1000).toFixed(2);
 
         // Total Sold Weight from Sales
         let totalSoldWeight = sales.reduce((sum, s) => sum + (s.totalWeightKg || 0), 0);
@@ -916,7 +921,7 @@ async function generateFarmerLedger() {
                             <div>Total Mortality: <span class="text-red-600">${totalMortality} Pcs (${mortalityPercent}%)</span></div>
                             <div>Total Feed Consumed: <span class="text-blue-700">${totalFeedConsumed} Kg</span></div>
                             <div>Closing Feed: <span class="text-purple-700">${closingFeed >= 0 ? closingFeed : 0} Kg</span></div>
-                            <div>Avg. Body Weight: <span class="text-green-700">${avgBodyWeight} gm</span></div>
+                            <div>Latest Body Weight: <span class="text-green-700">${latestBodyWeight} gm</span></div>
                             <div>Total Body Weight: <span class="text-green-800">${totalBodyWeightKg} Kg</span></div>
                             <div>FCR Ratio: <span class="text-amber-700 font-bold">${fcr}</span></div>
                         </div>
