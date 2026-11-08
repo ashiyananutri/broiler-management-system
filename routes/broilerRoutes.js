@@ -35,8 +35,8 @@ router.post('/items', async (req, res) => {
     try { const item = new Item(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Normalized Users Route for Dropdowns
-router.get(['/users', '/api/users'], async (req, res) => {
+// Normalized Users/Supervisors Route for Form Dropdowns
+router.get(['/users', '/api/users', '/auth/users'], async (req, res) => {
     try { 
         const users = await User.find().lean();
         const formattedUsers = users.map(u => ({
@@ -52,8 +52,13 @@ router.get(['/users', '/api/users'], async (req, res) => {
         res.status(500).json({ error: err.message }); 
     }
 });
-router.post('/users', async (req, res) => {
-    try { const item = new User(req.body); res.status(201).json(await item.save()); } catch (err) { res.status(500).json({ error: err.message }); }
+router.post(['/users', '/api/users'], async (req, res) => {
+    try { 
+        const item = new User(req.body); 
+        res.status(201).json(await item.save()); 
+    } catch (err) { 
+        res.status(500).json({ error: err.message }); 
+    }
 });
 
 router.get('/farmers', async (req, res) => {
