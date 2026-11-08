@@ -34,7 +34,7 @@ router.get(['/', '/users'], async (req, res) => {
     }
 });
 
-// User Login Route (Auto-creates default admin if database is empty)
+// User Login Route
 router.post('/login', async (req, res) => {
     try {
         await ensureDefaultAdmin();
