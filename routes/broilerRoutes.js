@@ -1,52 +1,58 @@
 const express = require('express');
 const router = express.Router();
 
-// ⚠️ Agar aapke models 'model.js' me hain toh yahi rehne dein, 
-// warna apni model file ka sahi naam yahan daal dein (jaise '../models/db' ya '../models/Broiler')
-const { ChicksEntry, FeedRequest, DailyEntry, SaleEntry, Branch, Farmer, Trader, Item } = require('../models/model');
+const Batch = require('../models/Batch');
+const Branch = require('../models/Branch');
+const DailyLog = require('../models/DailyLog');
+const Farmer = require('../models/Farmer');
+const Invoice = require('../models/Invoice');
+const Item = require('../models/Item');
+const LiftingLog = require('../models/LiftingLog');
+const Trader = require('../models/Trader');
+const Transaction = require('../models/Transaction');
+const User = require('../models/Users');
 
 // 1. Batch-wise Summary Report
 router.get('/reports/batch-summary', async (req, res) => {
     try {
-        const chicks = await ChicksEntry.find().populate('farmerId', 'name farmId branch');
-        const dailyLogs = await DailyEntry.find();
-        const feedRequests = await FeedRequest.find();
-        const sales = await SaleEntry.find();
+        const chicks = await Batch.find().populate('farmerId', 'name farmId branch');
+        const dailyLogs = await DailyLog.find();
+        const sales = await Transaction.find();
 
         let report = chicks.map(c => {
-            const batchNo = c.batchNo;
+            const batchNo = c.batchNo || c.batchNumber;
             const logs = dailyLogs.filter(d => d.batchNo === batchNo);
-            const batchFeeds = feedRequests.filter(f => f.batchNo === batchNo);
             const batchSales = sales.filter(s => s.batchNo === batchNo);
 
             const totalMortality = logs.reduce((sum, l) => sum + (l.mortality || 0), 0);
-            const totalFeedIssued = batchFeeds.reduce((sum, f) => sum + (f.quantity || 0), 0);
-            const totalFeedConsumed = logs.reduce((sum, l) => sum + (l.feedConsumedKg || 0), 0);
+            const totalFeedConsumed = logs.reduce((sum, l) => sum + (l.feedConsumedKg || l.feedConsumed || 0), 0);
 
-            const totalSoldBirds = batchSales.reduce((sum, s) => sum + (s.birdsCount || 0), 0);
-            const totalSoldWeight = batchSales.reduce((sum, s) => sum + (s.totalWeightKg || 0), 0);
-            const totalRevenue = batchSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+            const totalSoldBirds = batchSales.reduce((sum, s) => sum + (s.birdsCount || s.quantity || 0), 0);
+            const totalSoldWeight = batchSales.reduce((sum, s) => sum + (s.totalWeightKg || s.weight || 0), 0);
+            const totalRevenue = batchSales.reduce((sum, s) => sum + (s.totalAmount || s.amount || 0), 0);
 
-            const liveBirds = c.quantity - totalMortality - totalSoldBirds;
+            const liveBirds = (c.quantity || c.placedChicks || 0) - totalMortality - totalSoldBirds;
+            const totalFeedIssued = c.feedIssued || totalFeedConsumed; 
             const closingFeed = totalFeedIssued - totalFeedConsumed;
 
             let latestBodyWeightGm = 0;
             if (logs.length > 0) {
-                const sortedLogs = [...logs].sort((a, b) => (b.ageInDays || 0) - (a.ageInDays || 0));
-                latestBodyWeightGm = sortedLogs[0].bodyWeightGm || 0;
+                const sortedLogs = [...logs].sort((a, b) => (b.ageInDays || b.age || 0) - (a.ageInDays || a.age || 0));
+                latestBodyWeightGm = sortedLogs[0].bodyWeightGm || sortedLogs[0].bodyWeight || 0;
             }
 
             const liveWeightKg = ((liveBirds * latestBodyWeightGm) / 1000);
             const totalEffectiveWeightKg = totalSoldWeight + liveWeightKg;
             const fcr = totalEffectiveWeightKg > 0 ? (totalFeedConsumed / totalEffectiveWeightKg).toFixed(2) : '0.00';
-            const mortalityPercent = c.quantity > 0 ? ((totalMortality / c.quantity) * 100).toFixed(1) : '0.0';
+            const placedQty = c.quantity || c.placedChicks || 1;
+            const mortalityPercent = placedQty > 0 ? ((totalMortality / placedQty) * 100).toFixed(1) : '0.0';
 
             return {
-                batchNo: c.batchNo,
+                batchNo: batchNo,
                 farmerName: c.farmerId ? c.farmerId.name : 'N/A',
                 farmId: c.farmerId ? c.farmerId.farmId : 'N/A',
                 branch: c.branch || (c.farmerId && c.farmerId.branch) || 'Main',
-                placedChicks: c.quantity,
+                placedChicks: placedQty,
                 liveBirds: liveBirds >= 0 ? liveBirds : 0,
                 totalMortality,
                 mortalityPercent,
@@ -69,10 +75,9 @@ router.get('/reports/batch-summary', async (req, res) => {
 // 2. Branch-wise Performance Report
 router.get('/reports/branch-summary', async (req, res) => {
     try {
-        const chicks = await ChicksEntry.find().populate('farmerId', 'name farmId branch');
-        const dailyLogs = await DailyEntry.find();
-        const feedRequests = await FeedRequest.find();
-        const sales = await SaleEntry.find();
+        const chicks = await Batch.find().populate('farmerId', 'name farmId branch');
+        const dailyLogs = await DailyLog.find();
+        const sales = await Transaction.find();
 
         let branchMap = {};
 
@@ -94,27 +99,26 @@ router.get('/reports/branch-summary', async (req, res) => {
                 };
             }
 
-            const batchNo = c.batchNo;
+            const batchNo = c.batchNo || c.batchNumber;
             const logs = dailyLogs.filter(d => d.batchNo === batchNo);
-            const batchFeeds = feedRequests.filter(f => f.batchNo === batchNo);
             const batchSales = sales.filter(s => s.batchNo === batchNo);
 
             const mortality = logs.reduce((sum, l) => sum + (l.mortality || 0), 0);
-            const feedIssued = batchFeeds.reduce((sum, f) => sum + (f.quantity || 0), 0);
-            const feedConsumed = logs.reduce((sum, l) => sum + (l.feedConsumedKg || 0), 0);
-            const soldBirds = batchSales.reduce((sum, s) => sum + (s.birdsCount || 0), 0);
-            const soldWeight = batchSales.reduce((sum, s) => sum + (s.totalWeightKg || 0), 0);
-            const revenue = batchSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+            const feedConsumed = logs.reduce((sum, l) => sum + (l.feedConsumedKg || l.feedConsumed || 0), 0);
+            const soldBirds = batchSales.reduce((sum, s) => sum + (s.birdsCount || s.quantity || 0), 0);
+            const soldWeight = batchSales.reduce((sum, s) => sum + (s.totalWeightKg || s.weight || 0), 0);
+            const revenue = batchSales.reduce((sum, s) => sum + (s.totalAmount || s.amount || 0), 0);
+            const placedQty = c.quantity || c.placedChicks || 0;
 
             branchMap[branchName].totalBatches += 1;
-            branchMap[branchName].placedChicks += c.quantity;
+            branchMap[branchName].placedChicks += placedQty;
             branchMap[branchName].totalMortality += mortality;
-            branchMap[branchName].totalFeedIssued += feedIssued;
+            branchMap[branchName].totalFeedIssued += (c.feedIssued || feedConsumed);
             branchMap[branchName].totalFeedConsumed += feedConsumed;
             branchMap[branchName].totalSoldBirds += soldBirds;
             branchMap[branchName].totalSoldWeight += soldWeight;
             branchMap[branchName].totalRevenue += revenue;
-            branchMap[branchName].liveBirdsCount += (c.quantity - mortality - soldBirds);
+            branchMap[branchName].liveBirdsCount += (placedQty - mortality - soldBirds);
         });
 
         let branchReport = Object.values(branchMap).map(b => {
@@ -141,16 +145,16 @@ router.get('/reports/farmer-ledger/:farmerId', async (req, res) => {
         const { farmerId } = req.params;
         const { batchNo } = req.query;
 
-        const farmer = await Farmer.findById(farmerId).populate('supervisorId', 'name branch');
+        const farmer = await Farmer.findById(farmerId);
         let queryFilter = { farmerId };
         if (batchNo && batchNo !== 'ALL') {
             queryFilter.batchNo = batchNo;
         }
 
-        const chicks = await ChicksEntry.find(queryFilter);
-        const feeds = await FeedRequest.find(queryFilter).populate('itemId', 'name unit');
-        const dailyLogs = await DailyEntry.find(queryFilter);
-        const sales = await SaleEntry.find(queryFilter).populate('traderId', 'name marketArea');
+        const chicks = await Batch.find(queryFilter);
+        const feeds = []; 
+        const dailyLogs = await DailyLog.find(queryFilter);
+        const sales = await Transaction.find(queryFilter).populate('traderId', 'name marketArea');
 
         res.json({ farmer, chicks, feeds, dailyLogs, sales });
     } catch (err) {
@@ -162,7 +166,7 @@ router.get('/reports/farmer-ledger/:farmerId', async (req, res) => {
 router.get('/farmer-batches/:farmerId', async (req, res) => {
     try {
         const { farmerId } = req.params;
-        const chicks = await ChicksEntry.find({ farmerId });
+        const chicks = await Batch.find({ farmerId });
         res.json(chicks);
     } catch (err) {
         res.status(500).json({ error: err.message });
