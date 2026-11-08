@@ -51,9 +51,7 @@ router.post('/chicks-entry', async (req, res) => {
         const batchNo = `BATCH-${String(count + 1).padStart(3, '0')}`;
         
         let entryData = { ...req.body, batchNo };
-        if (!entryData.date) {
-            entryData.date = new Date();
-        }
+        if (!entryData.date) entryData.date = new Date();
 
         const entry = new ChicksEntry(entryData);
         await entry.save();
@@ -66,17 +64,20 @@ router.post('/chicks-entry', async (req, res) => {
 // 2. Feed Out Request
 router.post('/feed-request', async (req, res) => {
     try {
-        const { branch, farmerId, itemId, quantity, sentBy } = req.body;
+        const { branch, farmerId, itemId, quantity, sentBy, date } = req.body;
         const farmer = await Farmer.findById(farmerId);
         if (!farmer || !farmer.supervisorId) {
             return res.status(400).json({ message: 'Farmer has no assigned supervisor!' });
         }
 
-        const feedReq = new FeedRequest({
+        let feedData = {
             branch, farmerId, itemId, quantity, sentBy,
             supervisorId: farmer.supervisorId,
             status: 'Pending'
-        });
+        };
+        if (date) feedData.date = date;
+
+        const feedReq = new FeedRequest(feedData);
         await feedReq.save();
         res.status(201).json({ message: 'Feed sent for supervisor approval successfully!', feedReq });
     } catch (err) {
@@ -87,7 +88,10 @@ router.post('/feed-request', async (req, res) => {
 // 3. Daily Entry
 router.post('/daily-entry', async (req, res) => {
     try {
-        const entry = new DailyEntry(req.body);
+        let entryData = { ...req.body };
+        if (!entryData.date) entryData.date = new Date();
+
+        const entry = new DailyEntry(entryData);
         await entry.save();
         res.status(201).json({ message: 'Daily log recorded successfully!', entry });
     } catch (err) {
@@ -98,12 +102,15 @@ router.post('/daily-entry', async (req, res) => {
 // 4. Sale Entry
 router.post('/sale-entry', async (req, res) => {
     try {
-        const { branch, farmerId, traderId, birdsCount, totalWeightKg, ratePerKg, soldBy } = req.body;
+        const { branch, farmerId, traderId, birdsCount, totalWeightKg, ratePerKg, soldBy, date } = req.body;
         const totalAmount = totalWeightKg * ratePerKg;
         
-        const sale = new SaleEntry({
+        let saleData = {
             branch, farmerId, traderId, birdsCount, totalWeightKg, ratePerKg, totalAmount, soldBy
-        });
+        };
+        if (date) saleData.date = date;
+
+        const sale = new SaleEntry(saleData);
         await sale.save();
         res.status(201).json({ message: 'Sale entry recorded successfully!', sale });
     } catch (err) {
