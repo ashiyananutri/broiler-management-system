@@ -10,10 +10,11 @@ const chicksEntrySchema = new mongoose.Schema({
     date: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// 2. Feed Transfer Request Schema
+// 2. Feed Transfer Request Schema (Batch Added)
 const feedRequestSchema = new mongoose.Schema({
     branch: { type: String, required: true },
     farmerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Farmer', required: true },
+    batchNo: { type: String, required: true }, // Added batch link
     itemId: { type: mongoose.Schema.Types.ObjectId, ref: 'Item', required: true },
     quantity: { type: Number, required: true },
     sentBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -22,10 +23,11 @@ const feedRequestSchema = new mongoose.Schema({
     date: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// 3. Daily Batch Entry Schema
+// 3. Daily Batch Entry Schema (Batch Added)
 const dailyEntrySchema = new mongoose.Schema({
     branch: { type: String, required: true },
     farmerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Farmer', required: true },
+    batchNo: { type: String, required: true }, // Added batch link
     ageInDays: { type: Number, required: true },
     mortality: { type: Number, default: 0 },
     feedConsumedKg: { type: Number, default: 0 },
@@ -34,10 +36,11 @@ const dailyEntrySchema = new mongoose.Schema({
     date: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// 4. Sale Entry Schema
+// 4. Sale Entry Schema (Batch Added)
 const saleEntrySchema = new mongoose.Schema({
     branch: { type: String, required: true },
     farmerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Farmer', required: true },
+    batchNo: { type: String, required: true }, // Added batch link
     traderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Trader', required: true },
     birdsCount: { type: Number, required: true },
     totalWeightKg: { type: Number, required: true },
